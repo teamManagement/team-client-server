@@ -19,6 +19,7 @@ func Run() {
 	engine := gin.New()
 
 	ginmiddleware.UseNotFoundHandle(engine)
+	InitIcons(engine)
 	engine.Use(ginmiddleware.UseLogs(), ginmiddleware.UseVerifyUserAgent("teamManagerLocalView"))
 	initProxy(engine)
 

@@ -174,6 +174,7 @@ func (s *SocketWrapper) loop() {
 		close(s.writeMsgChan)
 
 		if s.closeRemoteServerRestoreCh != nil {
+			logs.Debugf("关闭远程服务恢复线程")
 			s.closeRemoteServerRestoreCh <- struct{}{}
 			<-s.closeRemoteServerRestoreCh
 			s.closeRemoteServerRestoreCh = nil
@@ -182,6 +183,7 @@ func (s *SocketWrapper) loop() {
 	}()
 
 	go func() {
+		defer func() { recover() }()
 		remoteserver.StartTcpTransfer()
 		transfer := remoteserver.GetTcpTransfer()
 		for {
@@ -201,7 +203,9 @@ func (s *SocketWrapper) loop() {
 				})
 			case writeData, isOpen := <-s.writeMsgChan:
 				if !isOpen {
+					logs.Debugf("停止TCP Transfer channel")
 					remoteserver.StopTcpTransfer()
+					logs.Debugf("TCP Transfer channel 停止成功!")
 					return
 				}
 

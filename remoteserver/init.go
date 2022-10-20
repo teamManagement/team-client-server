@@ -71,6 +71,8 @@ var (
 	connCloseCh chan struct{}
 
 	lock = sync.Mutex{}
+
+	chanLock = sync.Mutex{}
 )
 
 const (
@@ -208,16 +210,16 @@ func userConnHandler(connWrapper *conn.Wrapper, dial net.Conn) {
 		_ = dial.Close()
 		nowUserInfo = nil
 		rawToken = nil
-		logs.Debugln("发送tcp关闭换消息到tcp与ws交互通道内...")
-		tcpTransferChan <- &TcpTransferInfo{
-			CmdCode: TcpTransferCmdCodeBlockingConnection,
-		}
-		logs.Debugln("成功退出用户远程TCP服务消息通道")
 
 		if !isClose {
+			logs.Debugln("发送tcp关闭换消息到tcp与ws交互通道内...")
+			tcpTransferChan <- &TcpTransferInfo{
+				CmdCode: TcpTransferCmdCodeBlockingConnection,
+			}
+			logs.Debugln("成功退出用户远程TCP服务消息通道")
 			return
 		}
-		connCloseCh <- struct{}{}
+		close(connCloseCh)
 		logs.Debugln("成功关闭用户远程TCP服务通道")
 	}()
 
@@ -237,17 +239,21 @@ func userConnHandler(connWrapper *conn.Wrapper, dial net.Conn) {
 		t := time.After(10 * time.Second)
 		select {
 		case <-t:
+			chanLock.Lock()
 			logs.Debugln("token即将过期, 主动尝试用户token延期业务...")
 			if err := tokenDelay(readDataFn, writeDataFn); err != nil {
+				chanLock.Unlock()
 				logs.Debugf("token延期失败, 将要关闭用户远程TCP服务通道, 本次错误信息: %s", err.Error())
 				return
 			}
+			chanLock.Unlock()
 			logs.Debugln("token延期成功")
 		case <-connCloseCh:
 			logs.Debugln("主动关闭用户远程TCP服务通道")
 			isClose = true
 			return
 		case code := <-cmdCh:
+			logs.Debugf("调用代码")
 			if err := serverCmdHandler(code, cmdCh, dataCh); err != nil {
 				return
 			}
@@ -344,8 +350,6 @@ func connReadHandler(connWrapper *conn.Wrapper, cmdCh chan byte, operationCh cha
 				errCh <- connWrapper.WriteFormatBytesData(d).Error()
 
 			}
-		case <-connCloseCh:
-			return
 		}
 	}
 }
@@ -354,6 +358,8 @@ func Logout() {
 	if lock.TryLock() {
 		defer lock.Unlock()
 	}
+	chanLock.Lock()
+	defer chanLock.Unlock()
 	loginOk = false
 
 	if connCloseCh == nil {
@@ -365,11 +371,7 @@ func Logout() {
 	<-connCloseCh
 	logs.Debugln("TCP服务通道成功返回关闭成功")
 
-	defer func() {
-		recover()
-		connCloseCh = nil
-	}()
-	close(connCloseCh)
+	connCloseCh = nil
 }
 
 func LoginOk() bool {
