@@ -21,8 +21,9 @@ func (p *program) Stop(s service.Service) error {
 }
 
 func Run() {
-	cmd := flag.String("c", "no", "要执行的命令")
+	cmd := flag.String("cmd", "no", "要执行的命令")
 	configDir := flag.String("configDir", "", "配置存储目录")
+	flag.Parse()
 
 	config.LoadConfig(*configDir)
 
