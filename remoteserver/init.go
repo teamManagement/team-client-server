@@ -236,7 +236,7 @@ func userConnHandler(connWrapper *conn.Wrapper, dial net.Conn) {
 	}
 
 	for {
-		t := time.After(10 * time.Second)
+		t := time.After(8 * time.Minute)
 		select {
 		case <-t:
 			chanLock.Lock()
