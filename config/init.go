@@ -95,3 +95,15 @@ func AddWatchAndNowExec(fn WatchRunFn) {
 	fn(currentConfig)
 	AddWatchFn(fn)
 }
+
+func CreateFileInConfigPath(dir string, filename string) (*os.File, string, error) {
+	dirPath := filepath.Join(configDirPath, dir)
+	_ = os.MkdirAll(dirPath, 0755)
+
+	fPath := filepath.Join(dirPath, filename)
+	file, err := os.OpenFile(fPath, os.O_CREATE|os.O_RDWR, 0655)
+	if err != nil {
+		return nil, "", err
+	}
+	return file, fPath, nil
+}

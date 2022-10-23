@@ -20,8 +20,12 @@ func Run() {
 
 	ginmiddleware.UseNotFoundHandle(engine)
 	InitIcons(engine)
+	// cache
+	engine.Any("/c/forward/:schema/:name/*path", proxyCacheForward)
+
 	engine.Use(ginmiddleware.UseLogs(), ginmiddleware.UseVerifyUserAgent("teamManagerLocalView"))
 	initProxy(engine)
+	initProxy443Route(engine)
 
 	engine.Use(ginmiddleware.UseRecover2HttpResult())
 	initWs(engine)

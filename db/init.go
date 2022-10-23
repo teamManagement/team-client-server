@@ -41,6 +41,8 @@ func configChange(config *config.Info) {
 func initDataTable() {
 	if err := sqlite.Db().
 		AutoMigrate(&vos.Setting{}).
+		AutoMigrate(&vos.ProxyHttpServerInfo{}).
+		AutoMigrate(&vos.ProxyHttpResponseCache{}).
 		AutoMigrate(&vos.Application{}).Error; err != nil {
 		logs.Fatalf("初始化数据库信息失败: %s")
 		os.Exit(10)
