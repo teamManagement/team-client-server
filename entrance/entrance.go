@@ -4,14 +4,19 @@ import (
 	"flag"
 	"github.com/go-base-lib/logs"
 	"github.com/kardianos/service"
+	"os"
 	"team-client-server/config"
 	loginit "team-client-server/logs"
 	"team-client-server/server"
+	"team-client-server/tools"
 )
 
 type program struct{}
 
 func (p *program) Start(s service.Service) error {
+	if tools.TelnetHost("127.0.0.1:65528") {
+		os.Exit(255)
+	}
 	go server.Run()
 	return nil
 }

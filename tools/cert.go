@@ -20,6 +20,12 @@ var ClientKeyBytes []byte
 //go:embed certs/client-server.key
 var ClientServerKeyBytes string
 
+//go:embed certs/proxy443.crt
+var Proxy443CertBytes []byte
+
+//go:embed certs/proxy443.key
+var Proxy443KeyBytes []byte
+
 var (
 	ClientPublicKey  *rsa.PublicKey
 	ClientPrivateKey *rsa.PrivateKey

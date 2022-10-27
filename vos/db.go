@@ -147,3 +147,22 @@ type Application struct {
 	// HideInStore 在应用商店内隐藏
 	HideInStore bool `json:"hideInStore,omitempty"`
 }
+
+type ProxyHttpServerInfo struct {
+	Name               string `json:"name,omitempty" gorm:"primary_key"`
+	Host               string `json:"host,omitempty"`
+	Schema             string `json:"schema,omitempty"`
+	AllowReturnType    string `json:"allowReturnType,omitempty" gorm:"type:text"`
+	NotAllowReturnType string `json:"notAllowReturnType,omitempty" gorm:"type:text"`
+}
+
+type ProxyHttpResponseCache struct {
+	// RequestHash hash
+	RequestHash string `gorm:"primary_key"`
+	// ContentPath 内容路径
+	ContentPath string `gorm:"type:text"`
+	// ContentHash 内容hash采用sha256
+	ContentHash        []byte
+	ResponseHeader     string
+	ResponseStatusCode int
+}
