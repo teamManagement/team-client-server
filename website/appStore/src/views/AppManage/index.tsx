@@ -1,4 +1,8 @@
+import { Button } from "antd"
+import { useState } from "react"
+import { IconPro } from "../../components/Icons"
 import { CustomTabs, TabsHeader } from "../../components/Tabs"
+import CheckModal from "./CheckModal"
 import WaitCheck from "./WaitCheck"
 
 const headers: TabsHeader[] = [
@@ -7,12 +11,20 @@ const headers: TabsHeader[] = [
 ]
 
 const AppManage: React.FC = () => {
+
+  const [ifShowCheck, setIfShowCheck] = useState<boolean>(false)
   return (
     <>
-      <CustomTabs headers={headers}>
-        <WaitCheck key='waitCheck' tabType='waitCheck' />
-        <WaitCheck key='allApps' tabType='allApps' />
-      </CustomTabs>
+      {!ifShowCheck && <CustomTabs headers={headers}>
+        <WaitCheck key='waitCheck' tabType='waitCheck' checkFn={() => {
+          setIfShowCheck(true)
+        }} />
+        <WaitCheck key='allApps' tabType='allApps' checkFn={() => { }} />
+      </CustomTabs>}
+      {ifShowCheck && <>
+        <Button className='cab' type='default' onClick={() => setIfShowCheck(false)} icon={<IconPro style={{ fontSize: 26 }} type='icon-fanhui' />}>返回列表</Button>
+        <CheckModal />
+      </>}
     </>
   )
 }

@@ -2,9 +2,10 @@ import { Layout, Menu, message, Spin } from "antd";
 import { DownOutlined } from "@ant-design/icons";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { IconPro } from "../components/Icons";
-import { MenuItemInfo } from "./types";
+import { MenuItemInfo, UserInfo } from "./types";
 import { Routes, useLocation, useNavigate } from "react-router-dom";
 import { LayoutContentEles } from "./LayoutItemMap";
+import { MessagePlugin } from 'tdesign-react'
 import "./index.less";
 
 const { Header, Sider, Content } = Layout;
@@ -24,12 +25,28 @@ export default function LayoutView(): React.ReactNode {
   const [menuContentItems, setMenuContentItems] = useState<MenuItemInfo[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
 
+  const [userInfo, setUserInfo] = useState<UserInfo | undefined>(undefined)
+
+  // useEffect(() => {
+  //   window.proxyApi
+  //     .httpLocalServerProxy<UserInfo>('/user/now')
+  //     .then((user) => {
+  //       console.log('获取到的用户信息: ', user)
+  //       setUserInfo(user)
+  //     })
+  //     .catch((e) => {
+  //       MessagePlugin.error('获取用户信息失败: ' + ((e as any).message || e))
+  //     })
+  // }, [])
+
+
+
   const queryMenuList = useCallback(async () => {
     try {
       setLoading(true);
       const a = [
-        { id: '123', name: '/home', title: '首页', icon: <IconPro type='icon-yunyingpan' />, sort: 1 },
-        { id: '456', name: '/manage', title: '管理', icon: <IconPro type="icon-yingyong" />, sort: 1 },
+        { id: '123', name: '/home', title: '首页', icon: 'icon-yunyingpan', sort: 1 },
+        { id: '456', name: '/manage', title: '管理', icon: 'icon-yingyong', sort: 1 },
       ]
       setMenuItems(a)
     } catch (e) {
@@ -58,8 +75,6 @@ export default function LayoutView(): React.ReactNode {
             }
             return;
           }
-
-          console.log(menu.id);
           let contentMenuList: any[] = []
           // const contentMenuList = await MenuContentId(menu.id);
           if (menu.id === '123') {
@@ -74,7 +89,7 @@ export default function LayoutView(): React.ReactNode {
             contentMenuList = [
               { id: '456789', name: '/manage/types', title: '类别管理', icon: '', sort: 1 },
               { id: '456123', name: '/manage/apps', title: '应用管理', icon: '', sort: 1 },
-              // { id: '456127', name: '/manage/apps', title: '文档中心', icon: '', sort: 1 },
+              { id: '45642780086', name: '/manage/test', title: '应用管理', icon: '', sort: 1 },
             ]
           }
           sessionStorage.setItem(
@@ -189,7 +204,7 @@ export default function LayoutView(): React.ReactNode {
   return (
     <Spin spinning={loading} tip="内容正在加载...">
       <Layout className="project-layout">
-        <Header className="header" style={{ background: "#1345aa" }}>
+        { <Header className="header" style={{ background: "#1345aa" }}>
           <div className="logo" />
           <Menu
             theme="light"
@@ -198,16 +213,17 @@ export default function LayoutView(): React.ReactNode {
           >
             {topMenuItemEles}
           </Menu>
-        </Header>
+        </Header>}
         <Layout>
           {menuContentItems.length > 0 && (
-            <Sider width={200} className="site-layout-background" >
+            <Sider width={100} className="site-layout-background-sider" >
               <Menu
                 mode="inline"
                 selectedKeys={topMenuCurrentSelectedKey}
                 style={{
                   borderRight: 0,
-                  paddingTop: 19
+                  paddingTop: 19,
+                  marginLeft: 0,
                 }}
               >
                 {headerItem(menuContentItems)}
