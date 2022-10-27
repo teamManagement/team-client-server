@@ -40,6 +40,14 @@ func Run() {
 		logs.Panicf("创建服务实例失败: %s", err.Error())
 	}
 
+	if *cmd == "check" {
+		if tools.TelnetHost("127.0.0.1:65528") {
+			os.Exit(9)
+		}
+		os.Exit(0)
+		return
+	}
+
 	if *cmd == "stop" || *cmd == "install" || *cmd == "start" || *cmd == "uninstall" {
 		err = service.Control(s, *cmd)
 		if err != nil {

@@ -12,16 +12,16 @@ import (
 
 func initLocalService(engine *gin.Engine) {
 	{
-		engine.
-			POST("/app/force/refresh", ginmiddleware.WrapperResponseHandle(appForceRefresh)).
-			POST("/app/info/desktop/list", ginmiddleware.WrapperResponseHandle(appInfoDesktopList)).
-			POST("/app/info/:id", ginmiddleware.WrapperResponseHandle(appInfoGetById))
+		engine.Group("app").
+			POST("/force/refresh", ginmiddleware.WrapperResponseHandle(appForceRefresh)).
+			POST("/info/desktop/list", ginmiddleware.WrapperResponseHandle(appInfoDesktopList)).
+			POST("/info/:id", ginmiddleware.WrapperResponseHandle(appInfoGetById))
 	}
 
 	{
-		engine.
-			POST("/user/now", ginmiddleware.WrapperResponseHandle(userNowInfo)).
-			POST("/user/status", ginmiddleware.WrapperResponseHandle(userNowStatus))
+		engine.Group("/user").
+			POST("/now", ginmiddleware.WrapperResponseHandle(userNowInfo)).
+			POST("/status", ginmiddleware.WrapperResponseHandle(userNowStatus))
 	}
 
 }
@@ -51,7 +51,12 @@ var (
 			appModel := tx.Model(&vos.Application{})
 			appModel.Delete(&vos.Application{})
 			for i := range appList {
-				if err := appModel.Create(appList[i]).Error; err != nil {
+				appInfo := appList[i]
+				if appInfo.Type == vos.ApplicationTypeRemoteWeb {
+					appInfo.Url = appInfo.RemoteSiteUrl
+				}
+
+				if err := appModel.Create(appInfo).Error; err != nil {
 					return fmt.Errorf("保存应用信息失败: %s", err.Error())
 				}
 			}

@@ -124,6 +124,8 @@ type Application struct {
 	Type ApplicationType `json:"type"`
 	// RemoteSiteUrl 远程站点地址, 当 Type 为 ApplicationTypeRemoteWeb 时必填
 	RemoteSiteUrl string `json:"remoteSiteUrl,omitempty" gorm:"type:longtext"`
+	// Url 访问url
+	Url string `json:"url,omitempty" gorm:"type:longtext"`
 	// LocalFileHash 本地文件HASH
 	LocalFileHash []byte `json:"localFileHash,omitempty"`
 	// Icon 图标地址

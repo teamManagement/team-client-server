@@ -111,7 +111,7 @@ var (
 		token := remoteserver.Token()
 		header := ctx.Request.Header
 		if token != "" {
-			header.Set("t", token)
+			header.Set("_t", token)
 		}
 		header.Set("User-Agent", "teamManageLocal")
 		ctx.Request.URL.Path = ctx.Request.URL.Path[6:]
@@ -215,7 +215,7 @@ var (
 	StartForward:
 		token = remoteserver.Token()
 		if token != "" {
-			ctx.Request.Header.Set("t", token)
+			ctx.Request.Header.Set("_t", token)
 		}
 
 		ctx.Request.URL.Path = fmt.Sprintf("/proxy/c/forward/%s/%s/%s/%s", proxyServerInfo.Schema, ctx.Param("name"), proxyServerInfo.Host)

@@ -83,6 +83,14 @@ const (
 	autoLoginSettingKey = "USER_CREDENTIALS"
 )
 
+func ClearAutoLoginInfo() {
+	autoLoginSetting := &vos.Setting{
+		Name: autoLoginSettingKey,
+	}
+	sqlite.Db().Model(autoLoginSetting).Delete(autoLoginSetting)
+	Logout()
+}
+
 func AutoLogin() (res bool) {
 	autoLoginSetting := &vos.Setting{
 		Name: autoLoginSettingKey,
@@ -257,6 +265,9 @@ func userConnHandler(connWrapper *conn.Wrapper, dial net.Conn) {
 			if err := serverCmdHandler(code, cmdCh, dataCh); err != nil {
 				return
 			}
+		case err := <-errCh:
+			logs.Debugf("TCP通道监听返回错误: %s， 将要关闭TCP通道", err.Error())
+			return
 		}
 	}
 }
