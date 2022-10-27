@@ -3,8 +3,8 @@ import { Button, Image, Tabs, Divider } from 'antd'
 import { IconPro } from '../../components/Icons'
 import './index.less'
 import SwiperDeatil from './Swaiper'
+// import image from '../../imgs/markdown.png'
 
-const image = require('../../imgs/markdown.png')
 
 interface IDeatilProps {
   fns: any,
@@ -17,6 +17,7 @@ const Detail: React.FC<IDeatilProps> = (props) => {
   const [visible, setVisible] = useState<boolean>(false)
   const [versionList, setVersionList] = useState<any[]>([1, 2, 4, 5, 6, 7, 8, 9, 10, 11])
 
+  const image = require('../../imgs/markdown.png')
   useEffect(() => {
     props.fns.current = {
       show() {
