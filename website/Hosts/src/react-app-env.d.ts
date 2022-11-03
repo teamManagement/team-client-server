@@ -1,4 +1,5 @@
 /// <reference types="react-scripts" />
+
 import { ElectronAPI } from '@electron-toolkit/preload'
 
 declare global {
@@ -159,6 +160,7 @@ declare global {
   //#endregion
 
   interface Window {
+
     teamworkSDK: {
       store: {
         set(key: string, val: any): Promise<void>
@@ -187,7 +189,15 @@ declare global {
           getDownloadUrl(cacheId: string):string,
         }
       }
+      hosts:{
+        add(...line:string[]):Promise<void>,
+        addToHeader(...line:string[]):Promise<void>,
+        export():Promise<string>,
+        cover(newHostsContent:string):Promise<void>,
+        delete(dnsOrIp:string):Promise<void>,
+      }
     }
+
     electron: ElectronAPI & {
       ContextMenu: {
         get(): ContextMenu

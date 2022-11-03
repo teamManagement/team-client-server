@@ -102,6 +102,15 @@
   min-width: 790px;
   height: 100vh;
 
+  span.ant-menu-title-content {
+    margin-left: 26px;
+  }
+
+  li.ant-menu-item {
+    height: 58px !important;
+    font-size: 18px;
+  }
+
   .header {
     .ant-menu {
       color: #b6c6f9;
@@ -172,5 +181,37 @@
 
   li.ant-menu-item {
     padding: 0 0 !important;
+  }
+}
+
+
+.addAppType {
+  position: absolute;
+  left: 14px;
+  bottom: 30px;
+
+  .type-btn {
+    // font-weight: bold;
+    font-size: 18px;
+  }
+}
+
+.add-btn {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 72vh;
+
+  .add-btn-item {
+    height: 50px;
+    width: 120px;
+    font-size: 18px;
+    border-radius: 6px;
+  }
+}
+
+.appModal {
+  .ant-space.ant-space-horizontal.ant-space-align-center {
+    display: none;
   }
 }

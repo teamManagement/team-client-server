@@ -1,13 +1,15 @@
-import ProForm, { ProFormText } from "@ant-design/pro-form"
-import { Button, Form, FormInstance, Input, message, Modal } from "antd"
-import { useCallback, useEffect, useRef, useState } from "react"
+import { message, Modal, Button, } from "antd";
+import { FC, useCallback, useEffect, useRef, useState } from "react";
+import { ProForm, ProFormText } from '@ant-design/pro-form';
+import { isNull } from "../../components/utils";
 
-interface ISignProps {
+interface IAddAppProps {
   fns: any,
-  finished: any
+  finished: (name: any) => void
 }
 
-const FirstGetName: React.FC<ISignProps> = (props) => {
+
+const AddNewApp: FC<IAddAppProps> = (props) => {
   const [visible, setVisible] = useState<boolean>(false)
   const [loading, setLoading] = useState<boolean>(false)
 
@@ -28,28 +30,26 @@ const FirstGetName: React.FC<ISignProps> = (props) => {
     formRef.current?.submit()
     const formValue = formRef.current?.getFieldsValue()
     console.log(formValue)
-    try {
-      await window.proxyApi.httpWebServerProxy('/org/add', { jsonData: formValue })
-      setVisible(false)
-      props.finished()
-    } catch (e: any) {
-      message.error(e)
+    if (isNull(formValue.name)) {
+      setLoading(false)
+      return;
     }
+    setVisible(false)
+    props.finished(formValue.name)
     setLoading(false)
   }, [props])
-
   return (
     <>
       <Modal onOk={onSave}
         okText='确定'
         cancelText='取消'
-        title='新增人员管理'
+        title='新增应用'
         width='45vw'
         keyboard={false}
-        className="sealModal"
+        className="appModal"
         maskClosable={false}
         destroyOnClose
-        open={visible}
+        visible={visible}
         onCancel={() => setVisible(false)}
         footer={[
           <>
@@ -58,14 +58,12 @@ const FirstGetName: React.FC<ISignProps> = (props) => {
           </>
         ]}
       >
-        <Form ref={formRef} layout='vertical'>
-          <Form.Item label='机构名称' name='name'>
-            <Input />
-          </Form.Item>
-        </Form>
+        <ProForm formRef={formRef}>
+          <ProFormText label='应用名称' name='name' rules={[{ required: true }]} />
+        </ProForm>
       </Modal>
     </>
   )
 }
 
-export default FirstGetName
+export default AddNewApp

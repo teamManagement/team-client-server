@@ -1,16 +1,21 @@
-import { Layout, Menu, message, Spin, Image } from "antd";
-import { DownOutlined } from "@ant-design/icons";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { IconPro } from "../components/Icons";
-import { MenuItemInfo, UserInfo } from "./types";
+import { Layout, Menu, message, Spin, Image, Button } from "antd";
+import { PlusOutlined } from "@ant-design/icons";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { MenuItemInfo } from "./types";
 import { Routes, useLocation, useNavigate } from "react-router-dom";
 import { LayoutContentEles } from "./LayoutItemMap";
-import { MessagePlugin } from 'tdesign-react'
 import "./index.less";
+import AddNewApp from "../views/Home/addNewApp";
 
-const { Header, Sider, Content } = Layout;
-const { SubMenu } = Menu;
+const { Sider, Content } = Layout;
 
+function uuid() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+    var r = Math.random() * 16 | 0,
+      v = c == 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
 
 /**
  * layout布局
@@ -24,28 +29,15 @@ export default function LayoutView(): React.ReactNode {
   const [menuItems, setMenuItems] = useState<MenuItemInfo[]>([]);
   const [menuContentItems, setMenuContentItems] = useState<MenuItemInfo[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
-
-  const [userInfo, setUserInfo] = useState<UserInfo | undefined>(undefined)
-
-  // useEffect(() => {
-  //   window.proxyApi
-  //     .httpLocalServerProxy<UserInfo>('/user/now')
-  //     .then((user) => {
-  //       console.log('获取到的用户信息: ', user)
-  //       setUserInfo(user)
-  //     })
-  //     .catch((e) => {
-  //       MessagePlugin.error('获取用户信息失败: ' + ((e as any).message || e))
-  //     })
-  // }, [])
-
-
+  const [contentMenuList, setContentMenuList] = useState<any[]>([])
+  const [image, setImage] = useState<any>()
+  const fnsRef = useRef<any>()
 
   const queryMenuList = useCallback(async () => {
     try {
       setLoading(true);
       const a = [
-        { id: '123', name: '/home', title: '首页', icon: 'icon-yunyingpan', sort: 1 },
+        { id: '123', name: '/app', title: '首页', icon: 'icon-yunyingpan', sort: 1 },
       ]
       setMenuItems(a)
     } catch (e) {
@@ -55,67 +47,59 @@ export default function LayoutView(): React.ReactNode {
     }
   }, []);
 
-  const queryContentMenuList = useCallback(
-    async (menu?: MenuItemInfo) => {
-      setLoading(true);
-      try {
-        setMenuContentItems([]);
-        if (!menu) {
-          return;
-        }
-
-        try {
-          const list = sessionStorage.getItem(menu.id + "_content_menu_list");
-          if (list) {
-            const menuList: MenuItemInfo[] = JSON.parse(list);
-            setMenuContentItems(menuList);
-            if (menuList.length > 0) {
-              navigate(menuList[0].name);
-            }
-            return;
-          }
-          let contentMenuList: any[] = []
-          // const contentMenuList = await MenuContentId(menu.id);
-          contentMenuList = [
-            { id: '123456', name: '/home/recommend', title: '应用1', icon: <Image src='https://127.0.0.1:65528/icons/appstore.png' />, sort: 1 },
-            { id: '12378934', name: '/home/type1', title: '应用2', icon: '', sort: 1 },
-            { id: '12378956', name: '/home/type2', title: '应用3', icon: '', sort: 1 },
-            { id: '12378987', name: '/home/type3', title: '应用4', icon: '', sort: 1 },
-          ]
-
-          // if (menu.id === '456') {
-          //   contentMenuList = [
-          //     { id: '456789', name: '/manage/types', title: '类别管理', icon: '', sort: 1 },
-          //     { id: '456123', name: '/manage/apps', title: '应用管理', icon: '', sort: 1 },
-          //     { id: '45642780086', name: '/manage/test', title: '应用管理', icon: '', sort: 1 },
-          //   ]
-          // }
-          sessionStorage.setItem(
-            menu.id + "_content_menu_list",
-            JSON.stringify(contentMenuList)
-          );
-          setMenuContentItems(contentMenuList);
-          if (contentMenuList.length > 0) {
-            navigate(contentMenuList[0].name);
-          }
-        } catch (e) {
-          message.error(e as string);
-        }
-      } finally {
-        setLoading(false);
+  const queryContentMenuList = useCallback(async (menu?: MenuItemInfo) => {
+    setLoading(true);
+    try {
+      setMenuContentItems([]);
+      if (!menu) {
+        return;
       }
-    },
-    [navigate]
-  );
-
-  useEffect(() => {
-    queryMenuList();
-  }, [queryMenuList]);
-
-  useEffect(() => {
-    if (menuItems.length === 0) {
-      return;
+      try {
+        window.teamworkSDK.store.set(menuItems[0].id + "_content_menu_list", JSON.stringify(contentMenuList))
+        setMenuContentItems(contentMenuList);
+        if (contentMenuList.length > 0) {
+          navigate(contentMenuList[0].name);
+        }
+      } catch (e) {
+        message.error(e as string);
+      }
+    } finally {
+      setLoading(false)
     }
+  }, [navigate, contentMenuList]);
+
+  const addNewApp = useCallback(() => {
+    const newMenuList = JSON.parse(JSON.stringify(contentMenuList))
+    newMenuList.push({ id: uuid(), name: `/app/${uuid()}/新应用`, title: '新应用', icon: 'https://127.0.0.1:65528/icons/undefined.png', sort: 1 })
+    setContentMenuList(newMenuList)
+    window.teamworkSDK.store.set(menuItems[0].id + "_content_menu_list", JSON.stringify(newMenuList))
+    setMenuContentItems(newMenuList);
+    if (newMenuList.length > 0) {
+      navigate(newMenuList[newMenuList.length - 1].name);
+    }
+  }, [menuItems, contentMenuList])
+
+  useEffect(() => { queryMenuList(); }, [queryMenuList]);
+
+  const getStoreList = useCallback(async () => {
+    setLoading(true)
+    const data: any = await window.teamworkSDK.store.get<{ [key: string]: string }>(menuItems[0]?.id + "_content_menu_list")
+    console.log("store: ", data)
+    if (data.length > 0) {
+      setContentMenuList(data)
+    }
+    setLoading(false)
+    const list: any = await window.teamworkSDK.store.get<{ [key: string]: string }>('image-single')
+    console.log(list);
+    setImage(list)
+  }, [menuItems])
+
+  useEffect(() => {
+    getStoreList()
+  }, [getStoreList])
+
+  useEffect(() => {
+    if (menuItems.length === 0) { return; }
     for (let m of menuItems) {
       if (m.name === location.pathname) {
         queryContentMenuList(m);
@@ -162,25 +146,11 @@ export default function LayoutView(): React.ReactNode {
 
   const headerItem = useCallback((menuItemsInfo: MenuItemInfo[]) => {
     return menuItemsInfo.map((m) => {
-      if (m.children && m.children.length > 0) {
-        return (
-          <SubMenu
-            key={m.name}
-            icon={<IconPro type={m.icon} />}
-            title={
-              <>
-                {m.title}&nbsp;&nbsp;
-                <DownOutlined />
-              </>
-            }
-          >
-            {headerItem(m.children)}
-          </SubMenu>
-        );
-      }
+      console.log(m);
+
       return (
         <Menu.Item
-          icon={<IconPro type={m.icon} />}
+          icon={<Image style={{ marginLeft: 15, marginTop: -3 }} width={20} preview={false} src={m.icon} />}
           onClick={async () => {
             sessionStorage.setItem("c_p", m.name);
             navigate(m.name);
@@ -191,33 +161,18 @@ export default function LayoutView(): React.ReactNode {
         </Menu.Item>
       );
     });
-  },
-    [navigate]
-  );
-
-  const topMenuItemEles = useMemo(() => {
-    return headerItem(menuItems);
-  }, [headerItem, menuItems]);
+  }, [navigate, image]);
 
   return (
     <Spin spinning={loading} tip="内容正在加载...">
-      <Layout className="project-layout">
-        {/* { <Header className="header" style={{ background: "#1345aa" }}>
-          <div className="logo" />
-          <Menu
-            theme="light"
-            mode="horizontal"
-            selectedKeys={topMenuCurrentSelectedKey}
-          >
-            {topMenuItemEles}
-          </Menu>
-        </Header>} */}
+      {menuContentItems.length > 0 ? <Layout className="project-layout">
         <Layout>
           {menuContentItems.length > 0 && (
-            <Sider width={100} className="site-layout-background-sider" >
+            <Sider width={200} className="site-layout-background-sider" >
               <Menu
                 mode="inline"
                 selectedKeys={topMenuCurrentSelectedKey}
+                defaultSelectedKeys={contentMenuList[contentMenuList.length - 1].name}
                 style={{
                   borderRight: 0,
                   paddingTop: 19,
@@ -226,6 +181,9 @@ export default function LayoutView(): React.ReactNode {
               >
                 {headerItem(menuContentItems)}
               </Menu>
+              <div className="addAppType">
+                <Button type='link' className="type-btn" icon={<PlusOutlined />} onClick={() => addNewApp()}>添加应用</Button>
+              </div>
             </Sider>
           )}
           <Layout style={{ padding: "0 24px 24px" }}>
@@ -247,6 +205,13 @@ export default function LayoutView(): React.ReactNode {
           </Layout>
         </Layout>
       </Layout>
+        : <div className="add-btn">
+          <Button type='primary' className="add-btn-item" onClick={() => fnsRef.current.show()}>新增应用</Button>
+        </div>
+      }
+      <AddNewApp fns={fnsRef} finished={(name) => {
+        setContentMenuList([{ id: uuid(), name: `/app/apps/${name}`, title: `${name}`, icon: image?image:'https://127.0.0.1:65528/icons/undefined.png', sort: 1 }])
+      }} />
     </Spin >
   );
 }
