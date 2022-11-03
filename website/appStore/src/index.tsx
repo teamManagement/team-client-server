@@ -10,10 +10,9 @@ const root = ReactDOM.createRoot(
   document.getElementById("root") as HTMLElement
 );
 root.render(
-  <TreeCreate/>
-  // <HashRouter>
-  //   <ConfigProvider locale={zhCN}>
-  //     <Router />
-  //   </ConfigProvider>
-  // </HashRouter>
+  <HashRouter>
+    <ConfigProvider locale={zhCN}>
+      <Router />
+    </ConfigProvider>
+  </HashRouter>
 );

@@ -27,17 +27,6 @@ export default function LayoutView(): React.ReactNode {
 
   const [userInfo, setUserInfo] = useState<UserInfo | undefined>(undefined)
 
-  // useEffect(() => {
-  //   window.proxyApi
-  //     .httpLocalServerProxy<UserInfo>('/user/now')
-  //     .then((user) => {
-  //       console.log('获取到的用户信息: ', user)
-  //       setUserInfo(user)
-  //     })
-  //     .catch((e) => {
-  //       MessagePlugin.error('获取用户信息失败: ' + ((e as any).message || e))
-  //     })
-  // }, [])
 
 
 
@@ -76,20 +65,18 @@ export default function LayoutView(): React.ReactNode {
             return;
           }
           let contentMenuList: any[] = []
-          // const contentMenuList = await MenuContentId(menu.id);
           if (menu.id === '123') {
             contentMenuList = [
-              { id: '123456', name: '/home/recommend', title: '推荐', icon: '', sort: 1 },
-              { id: '12378934', name: '/home/type1', title: '类型1', icon: '', sort: 1 },
-              { id: '12378956', name: '/home/type2', title: '类型2', icon: '', sort: 1 },
-              { id: '12378987', name: '/home/type3', title: '类型3', icon: '', sort: 1 },
+              // { id: '123456', name: '/home/recommend', title: '推荐', icon: '', sort: 1 },
+              // { id: '12378934', name: '/home/type1', title: '类型1', icon: '', sort: 1 },
+              // { id: '12378956', name: '/home/type2', title: '类型2', icon: '', sort: 1 },
+              // { id: '12378987', name: '/home/type3', title: '类型3', icon: '', sort: 1 },
             ]
           }
           if (menu.id === '456') {
             contentMenuList = [
-              { id: '456789', name: '/manage/types', title: '类别管理', icon: '', sort: 1 },
-              { id: '456123', name: '/manage/apps', title: '应用管理', icon: '', sort: 1 },
-              { id: '45642780086', name: '/manage/test', title: '应用管理', icon: '', sort: 1 },
+              { id: '456789', name: '/manage/types', title: '类别管理', icon: 'icon-yingyong', sort: 1 },
+              { id: '456123', name: '/manage/apps', title: '应用管理', icon: 'icon-yingyong', sort: 1 },
             ]
           }
           sessionStorage.setItem(
@@ -162,6 +149,22 @@ export default function LayoutView(): React.ReactNode {
     navigate(targetPath);
   }, [menuItems, location.pathname, navigate]);
 
+
+  useEffect(() => {
+    window.proxyApi
+      .httpLocalServerProxy<UserInfo>('/user/now')
+      .then((user) => {
+        console.log('获取到的用户信息: ', user)
+        if (user.id !== '0') {
+          setMenuItems([])
+        }
+        setUserInfo(user)
+      })
+      .catch((e) => {
+        MessagePlugin.error('获取用户信息失败: ' + ((e as any).message || e))
+      })
+  }, [])
+
   const headerItem = useCallback((menuItemsInfo: MenuItemInfo[]) => {
     return menuItemsInfo.map((m) => {
       if (m.children && m.children.length > 0) {
@@ -204,7 +207,7 @@ export default function LayoutView(): React.ReactNode {
   return (
     <Spin spinning={loading} tip="内容正在加载...">
       <Layout className="project-layout">
-        { <Header className="header" style={{ background: "#1345aa" }}>
+        {menuItems.length > 0 && <Header className="header" style={{ background: "#1345aa" }}>
           <div className="logo" />
           <Menu
             theme="light"
@@ -216,7 +219,7 @@ export default function LayoutView(): React.ReactNode {
         </Header>}
         <Layout>
           {menuContentItems.length > 0 && (
-            <Sider width={100} className="site-layout-background-sider" >
+            <Sider width={200} className="site-layout-background-sider" >
               <Menu
                 mode="inline"
                 selectedKeys={topMenuCurrentSelectedKey}
@@ -230,15 +233,14 @@ export default function LayoutView(): React.ReactNode {
               </Menu>
             </Sider>
           )}
-          <Layout style={{ padding: "0 24px 24px" }}>
+          <Layout>
             <Content
               className="site-layout-background"
               style={{
                 height: "100%",
-                padding: 24,
+                // padding: 24,
                 margin: 0,
-                marginTop: 24,
-                overflow: 'auto',
+                // overflow: 'auto',
                 background: "#fff",
               }}
             >

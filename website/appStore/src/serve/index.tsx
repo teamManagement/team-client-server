@@ -112,3 +112,14 @@ export async function deletePost(orgId: any, jobId: any): Promise<any> {
 export async function updatePost(data: any): Promise<any> {
   return await apiPostRequest({ url: "/org/post/update", data })
 }
+
+
+
+/**
+ * 获取类别列表
+ * @param data 
+ * @returns 
+ */
+export async function getTypeList(data: any): Promise<any> {
+  return await apiPostRequest({ url: "app/category/list", data })
+}

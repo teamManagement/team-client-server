@@ -53,10 +53,10 @@ const SwiperDeatil: React.FC = () => {
         <div>4. 代码块支持 168 种语言</div>
         <div>5. 支持 TODO 任务列表</div>
         <div>6. 支持数学公式</div>
-        <div>7. 可以导出 Markdown、Html、PDF、图片文件</div>
+        {/* <div>7. 可以导出 Markdown、Html、PDF、图片文件</div>
         <div>8. 分离多个窗口，同时编辑多个笔记</div>
         <div>9. 快速搜索笔记内容</div>
-        <div>10. 笔记加入 uTools 搜索， 直接打开</div>
+        <div>10. 笔记加入 uTools 搜索， 直接打开</div> */}
       </div>
 
       <div className='preClick' onClick={() => {
