@@ -11,6 +11,12 @@ type Info struct {
 	Database *Database
 	// Logs 日志配置
 	Logs *LogConfig
+	// Cache 缓存配置
+	Cache *CacheConfig
+}
+
+type CacheConfig struct {
+	File string
 }
 
 // Database 数据库配置

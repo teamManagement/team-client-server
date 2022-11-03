@@ -10,10 +10,12 @@ require (
 	github.com/go-base-lib/coderutils v0.0.0-20221003111253-ea24e02dc926
 	github.com/go-base-lib/goextension v0.0.0-20221003104525-59fbe063e6ad
 	github.com/go-base-lib/logs v0.0.0-20220723204936-3aac9518a91e
+	github.com/golang-jwt/jwt/v4 v4.4.2
 	github.com/gorilla/websocket v1.5.0
 	github.com/jinzhu/gorm v1.9.16
 	github.com/kardianos/service v1.2.1
 	github.com/mattn/go-sqlite3 v1.14.0
+	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/sirupsen/logrus v1.8.1
 	github.com/sony/sonyflake v1.0.0
 	github.com/spf13/viper v1.12.0
@@ -44,6 +46,7 @@ require (
 	github.com/pelletier/go-toml/v2 v2.0.2 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/rifflock/lfshook v0.0.0-20180920164130-b9218ef580f5 // indirect
+	github.com/sjy3/go-keylock v0.0.0-20210305015907-e987e967d5a4 // indirect
 	github.com/spf13/afero v1.8.2 // indirect
 	github.com/spf13/cast v1.5.0 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect

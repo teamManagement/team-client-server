@@ -41,6 +41,7 @@ func configChange(config *config.Info) {
 func initDataTable() {
 	if err := sqlite.Db().
 		AutoMigrate(&vos.Setting{}).
+		AutoMigrate(&vos.Setting{}).
 		AutoMigrate(&vos.ProxyHttpServerInfo{}).
 		AutoMigrate(&vos.ProxyHttpResponseCache{}).
 		AutoMigrate(&vos.Application{}).Error; err != nil {

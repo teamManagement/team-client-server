@@ -6,7 +6,9 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"github.com/byzk-worker/go-db-utils/sqlite"
 	"github.com/gin-gonic/gin"
+	"github.com/jinzhu/gorm"
 	ginmiddleware "github.com/teamManagement/gin-middleware"
 	"net/http"
 	"net/http/httputil"
@@ -14,7 +16,10 @@ import (
 	"strings"
 	"sync"
 	"team-client-server/tools"
+	"team-client-server/vos"
 )
+
+var lock = sync.Mutex{}
 
 type proxy443HttpHandlerImpl struct {
 }
@@ -26,10 +31,10 @@ func (p *proxy443HttpHandlerImpl) ServeHTTP(writer http.ResponseWriter, request 
 		return
 	}
 
-	if _, ok := proxy443AllowServerName[serverName]; !ok {
-		writer.WriteHeader(401)
-		return
-	}
+	//if _, ok := proxy443AllowServerName[serverName]; !ok {
+	//	writer.WriteHeader(401)
+	//	return
+	//}
 
 	if !strings.HasPrefix(request.URL.Path, "/") {
 		request.URL.Path += "/"
@@ -53,10 +58,11 @@ var (
 	proxy443AllowServerName = make(map[string]struct{})
 )
 
-func init() {
+func initProxyLocal443Config() {
 	proxy443Keypair, proxy443KeypairLoadErr = tls.X509KeyPair(tools.Proxy443CertBytes, tools.Proxy443KeyBytes)
 	uri, _ := url.Parse("https://127.0.0.1:65528")
 	proxy443ToLockHttpProxy = httputil.NewSingleHostReverseProxy(uri)
+	proxy443ToLockHttpProxy.Transport = tools.TlsTransport
 
 	block, _ := pem.Decode(tools.Proxy443CertBytes)
 	if block == nil {
@@ -78,6 +84,18 @@ func init() {
 		proxy443AllowServerName[name] = struct{}{}
 	}
 
+	proxy443Setting := &vos.Setting{}
+	settingModal := sqlite.Db().Model(&vos.Setting{})
+	settingModal.Where("name='proxyLocal443'").First(&proxy443Setting)
+	if proxy443Setting.Value == vos.EncryptValue('1') {
+		if err = proxyLocal443Start(); err != nil {
+			settingModal.Save(&vos.Setting{
+				Name:  "proxyLocal443",
+				Value: "0",
+			})
+		}
+	}
+
 }
 
 func initProxy443Route(engine *gin.Engine) {
@@ -97,12 +115,41 @@ var (
 
 	// proxy443Start 启动443端口代理
 	proxy443Start ginmiddleware.ServiceFun = func(ctx *gin.Context) interface{} {
-		proxy443Lock.Lock()
-		defer proxy443Lock.Unlock()
+		return proxyLocal443Start()
+	}
 
-		if proxy443IsRunning {
+	// proxy443Shutdown 443端口停止代理
+	proxy443Shutdown ginmiddleware.ServiceFun = func(ctx *gin.Context) interface{} {
+		lock.Lock()
+		defer lock.Unlock()
+
+		if !proxy443IsRunning {
 			return nil
 		}
+
+		return sqlite.Db().Transaction(func(tx *gorm.DB) error {
+			sqlite.Db().Model(&vos.Setting{}).Save(&vos.Setting{Name: "proxyLocal443", Value: "1"})
+			proxy443IsRunning = false
+			if proxy443HttpServer == nil {
+				return nil
+			}
+
+			_ = proxy443HttpServer.Close()
+			return nil
+		})
+	}
+)
+
+func proxyLocal443Start() error {
+	proxy443Lock.Lock()
+	defer proxy443Lock.Unlock()
+
+	if proxy443IsRunning {
+		return nil
+	}
+
+	return sqlite.Db().Transaction(func(tx *gorm.DB) error {
+		tx.Model(&vos.Setting{}).Save(&vos.Setting{Name: "proxyLocal443", Value: "1"})
 
 		if proxy443KeypairLoadErr != nil {
 			return fmt.Errorf("加载TLS密钥对失败: %s", proxy443KeypairLoadErr.Error())
@@ -132,23 +179,6 @@ var (
 			proxy443HttpServer = nil
 		}()
 		return nil
-	}
+	})
 
-	// proxy443Shutdown 443端口停止代理
-	proxy443Shutdown ginmiddleware.ServiceFun = func(ctx *gin.Context) interface{} {
-		lock.Lock()
-		defer lock.Unlock()
-
-		if !proxy443IsRunning {
-			return nil
-		}
-
-		proxy443IsRunning = false
-		if proxy443HttpServer == nil {
-			return nil
-		}
-
-		_ = proxy443HttpServer.Close()
-		return nil
-	}
-)
+}

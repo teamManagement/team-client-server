@@ -10,7 +10,9 @@ import (
 	"github.com/byzk-worker/go-db-utils/sqlite"
 	"github.com/gin-gonic/gin"
 	"github.com/go-base-lib/coderutils"
+	"github.com/go-base-lib/goextension"
 	"github.com/go-base-lib/logs"
+	lockKey "github.com/sjy3/go-keylock"
 	ginmiddleware "github.com/teamManagement/gin-middleware"
 	"io"
 	"net/http"
@@ -19,15 +21,15 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 	"team-client-server/config"
 	"team-client-server/remoteserver"
+	"team-client-server/tools"
 	"team-client-server/vos"
 )
 
-var localWebServerHttpProxy *httputil.ReverseProxy
+var keyLock = lockKey.NewKeyLock()
 
-var lock = &sync.Mutex{}
+var localWebServerHttpProxy *httputil.ReverseProxy
 
 func init() {
 	uri, err := url.Parse(remoteserver.LocalWebServerAddress)
@@ -36,66 +38,132 @@ func init() {
 		os.Exit(10)
 	}
 	localWebServerHttpProxy = httputil.NewSingleHostReverseProxy(uri)
+	localWebServerHttpProxy.Transport = tools.TlsTransport
 	localWebServerHttpProxy.ModifyResponse = httpResponseModify
 }
 
-func httpResponseModify(response *http.Response) error {
-	if response.StatusCode < 200 || response.StatusCode > 299 {
-		return nil
-	}
-	cacheH := response.Header.Get("_proxy_cache_result")
+func cacheHttpSuccessResponse(response *http.Response) error {
+	cacheH := response.Request.Header.Get("_proxy_cache_h")
 	if cacheH == "" {
 		return nil
 	}
 
-	lock.Lock()
-	defer lock.Unlock()
+	keyLock.Lock(cacheH)
 
-	f, cacheFilePath, err := config.CreateFileInConfigPath(filepath.Join("proxy", "_cache"), cacheH)
-	if err != nil {
+	responseBody := response.Body
+	pipeReader, pipeWriter := io.Pipe()
+	response.Body = pipeReader
+
+	responseHeaderMarshal, _ := json.Marshal(response.Header)
+	responseStatusCode := response.StatusCode
+	go func() {
+		defer keyLock.Unlock(cacheH)
+		defer pipeWriter.Close()
+
+		var (
+			cacheFile       *os.File
+			cacheFilePath   string
+			contentFileHash goextension.Bytes
+
+			err error
+		)
+
+		defer func() {
+			if err != nil && cacheFilePath != "" {
+				_ = os.Remove(cacheFilePath)
+			}
+		}()
+
+		cacheFile, cacheFilePath, err = config.CreateFileInConfigPath(filepath.Join("proxy", "_cache"), cacheH)
+		if err != nil {
+			_, _ = io.Copy(pipeWriter, responseBody)
+			return
+		}
+		defer cacheFile.Close()
+
+		writer := io.MultiWriter(cacheFile, pipeWriter)
+
+		_, err = io.Copy(writer, responseBody)
+
+		if _, err = cacheFile.Seek(0, 0); err != nil {
+			return
+		}
+
+		if contentFileHash, err = coderutils.HashByReader(sha256.New(), cacheFile); err != nil {
+			return
+		}
+
+		proxyHttpResponseCacheModel := sqlite.Db().Model(&vos.ProxyHttpResponseCache{})
+
+		var httpResponseCacheInfo *vos.ProxyHttpResponseCache
+		proxyHttpResponseCacheModel.Select("content_path").Where("request_hash=?", cacheH).First(&httpResponseCacheInfo)
+		if httpResponseCacheInfo != nil {
+			var stat os.FileInfo
+			if stat, err = os.Stat(httpResponseCacheInfo.ContentPath); err == nil && !stat.IsDir() {
+				_ = os.Remove(httpResponseCacheInfo.ContentPath)
+			}
+		} else {
+			httpResponseCacheInfo = &vos.ProxyHttpResponseCache{
+				RequestHash: cacheH,
+			}
+		}
+
+		httpResponseCacheInfo.ResponseHeader = string(responseHeaderMarshal)
+		httpResponseCacheInfo.ContentPath = cacheFilePath
+		httpResponseCacheInfo.ResponseStatusCode = responseStatusCode
+		httpResponseCacheInfo.ContentHash = contentFileHash
+		proxyHttpResponseCacheModel.Save(httpResponseCacheInfo)
+	}()
+	return nil
+}
+
+func httpResponseModify(response *http.Response) error {
+	if response.StatusCode >= 200 && response.StatusCode <= 299 {
+		return cacheHttpSuccessResponse(response)
+	}
+
+	cacheH := response.Request.Header.Get("_proxy_cache_h")
+	if cacheH == "" {
 		return nil
 	}
 
-	if _, err = io.Copy(f, response.Body); err != nil {
-		return err
-	}
-
-	if _, err = f.Seek(0, 0); err != nil {
-		return fmt.Errorf("移动文件指针失败: %s", err.Error())
-	}
-
-	contentFileHash, err := coderutils.HashByReader(sha256.New(), f)
-	if err != nil {
-		return errors.New("获取文件响应体内容HASH失败")
-	}
-
-	if _, err = f.Seek(0, 0); err != nil {
-		return fmt.Errorf("移动最终响应文件指针失败: %s", err.Error())
-	}
-
-	response.Body = f
+	keyLock.Lock(cacheH)
+	defer keyLock.Unlock(cacheH)
 
 	proxyHttpResponseCache := &vos.ProxyHttpResponseCache{
 		RequestHash: cacheH,
 	}
 
 	proxyHttpResponseCacheModel := sqlite.Db().Model(&vos.ProxyHttpResponseCache{})
-	if err = proxyHttpResponseCacheModel.Where(&proxyHttpResponseCache).First(&proxyHttpResponseCacheModel).Error; err == nil && contentFileHash.Equal(proxyHttpResponseCache.ContentHash) {
+	if err := proxyHttpResponseCacheModel.Where(&proxyHttpResponseCache).First(&proxyHttpResponseCache).Error; err != nil {
 		return nil
 	}
 
-	//if _, err = f.Seek(0, 0); err != nil {
-	//	return fmt.Errorf("还原响应体失败: %s", err.Error())
-	//}
+	contentPath := proxyHttpResponseCache.ContentPath
+	f, err := os.OpenFile(contentPath, os.O_RDONLY, 0655)
+	if err != nil {
+		return nil
+	}
 
-	marshal, _ := json.Marshal(response.Header)
+	if h, err := coderutils.HashByReader(sha256.New(), f); err != nil || !h.Equal(proxyHttpResponseCache.ContentHash) {
+		_ = f.Close()
+		return nil
+	}
 
-	proxyHttpResponseCache.ResponseHeader = string(marshal)
-	proxyHttpResponseCache.ResponseStatusCode = response.StatusCode
-	proxyHttpResponseCache.ContentHash = contentFileHash
-	proxyHttpResponseCache.ContentPath = cacheFilePath
+	if _, err = f.Seek(0, 0); err != nil {
+		_ = f.Close()
+		return nil
+	}
 
-	proxyHttpResponseCacheModel.Save(&proxyHttpResponseCache)
+	if err = json.Unmarshal([]byte(proxyHttpResponseCache.ResponseHeader), &response.Header); err != nil {
+		_ = f.Close()
+		return nil
+	}
+
+	response.StatusCode = proxyHttpResponseCache.ResponseStatusCode
+	_ = response.Body.Close()
+
+	response.Body = f
 
 	return nil
 }
@@ -147,7 +215,7 @@ var (
 		return nil
 	}
 
-	// proxyCacheForward 目标地址通过后台服务进行转发, 先查询本地缓存，
+	// proxyCacheForward 目标名称通过后台服务进行转发, 先查询本地缓存，
 	//缓存未命中时，将请求转发到后台中再次进行转发, 此项缓存只要url+method存在极为命中
 	//不会判断header用时请注意, 没有命中的只要服务器端返回状态码为200~299将会立即缓存数据, 其他则丢弃缓存
 	proxyCacheForward gin.HandlerFunc = func(ctx *gin.Context) {
@@ -158,67 +226,29 @@ var (
 			proxyName       = ctx.Param("name")
 			proxyTargetPath = ctx.Param("path")
 
-			proxyServerInfo = &vos.ProxyHttpServerInfo{
-				Name: proxyName,
-			}
+			//proxyServerInfo = &vos.ProxyHttpServerInfo{
+			//	Name: proxyName,
+			//}
 		)
 
-		if err := sqlite.Db().Model(proxyServerInfo).First(proxyServerInfo).Error; err != nil {
-			ctx.Status(405)
-			return
-		}
+		//if err := sqlite.Db().Model(proxyServerInfo).First(proxyServerInfo).Error; err != nil {
+		//	ctx.Status(405)
+		//	return
+		//}
 
 		if strings.HasPrefix(proxyTargetPath, "/") {
 			proxyTargetPath = proxyTargetPath[1:]
 		}
 
-		requestHash := hex.EncodeToString(sha512.New().Sum([]byte(ctx.Request.RequestURI + ctx.Request.Method)))
-		proxyHttpResponseCacheModel := sqlite.Db().Model(&vos.ProxyHttpResponseCache{})
+		requestHashBytes := sha512.Sum512([]byte(ctx.Request.RequestURI + ctx.Request.Method))
+		requestHash := hex.EncodeToString(requestHashBytes[:])
 
-		proxyResponseCache := &vos.ProxyHttpResponseCache{
-			RequestHash: requestHash,
-		}
-
-		if err := proxyHttpResponseCacheModel.Where(&proxyResponseCache).First(&proxyResponseCache).Error; err == nil && proxyResponseCache.ContentHash != nil && proxyResponseCache.ContentPath != "" {
-			h, err := coderutils.HashByFilePath(sha256.New(), proxyResponseCache.ContentPath)
-			if err != nil || !h.Equal(proxyResponseCache.ContentHash) {
-				goto StartForward
-			}
-
-			f, err := os.OpenFile(proxyResponseCache.ContentPath, os.O_RDONLY, 0655)
-			if err != nil {
-				goto StartForward
-			}
-			defer f.Close()
-
-			if proxyResponseCache.ResponseHeader != "" {
-				var header http.Header
-				if err = json.Unmarshal([]byte(proxyResponseCache.ResponseHeader), &header); err != nil {
-					goto StartForward
-				}
-				for k := range header {
-					val := header[k]
-					v := ""
-					if len(val) > 0 {
-						v = val[1]
-					}
-					ctx.Writer.Header().Set(k, v)
-				}
-
-				ctx.Writer.WriteHeader(proxyResponseCache.ResponseStatusCode)
-			}
-
-			_, _ = io.Copy(ctx.Writer, f)
-			return
-		}
-
-	StartForward:
 		token = remoteserver.Token()
 		if token != "" {
 			ctx.Request.Header.Set("_t", token)
 		}
 
-		ctx.Request.URL.Path = fmt.Sprintf("/proxy/c/forward/%s/%s/%s/%s", proxyServerInfo.Schema, ctx.Param("name"), proxyServerInfo.Host)
+		ctx.Request.URL.Path = fmt.Sprintf("/proxy/%s/%s", proxyName, proxyTargetPath)
 		originUserAgent = ctx.Request.Header.Get("User-Agent")
 		ctx.Request.Header.Set("User-Agent", "teamManageLocal")
 		ctx.Request.Header.Set("Origin-User-Agent", originUserAgent)
