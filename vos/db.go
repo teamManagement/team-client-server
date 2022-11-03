@@ -124,6 +124,8 @@ type Application struct {
 	Type ApplicationType `json:"type"`
 	// RemoteSiteUrl 远程站点地址, 当 Type 为 ApplicationTypeRemoteWeb 时必填
 	RemoteSiteUrl string `json:"remoteSiteUrl,omitempty" gorm:"type:longtext"`
+	// Url 访问url
+	Url string `json:"url,omitempty" gorm:"type:longtext"`
 	// LocalFileHash 本地文件HASH
 	LocalFileHash []byte `json:"localFileHash,omitempty"`
 	// Icon 图标地址
@@ -146,6 +148,8 @@ type Application struct {
 	Recommend bool `json:"recommend,omitempty"`
 	// HideInStore 在应用商店内隐藏
 	HideInStore bool `json:"hideInStore,omitempty"`
+	// Debugging 是否正在调试中
+	Debugging bool `json:"debugging,omitempty"`
 }
 
 type ProxyHttpServerInfo struct {

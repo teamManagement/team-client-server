@@ -3,7 +3,6 @@ package remoteserver
 import (
 	"bytes"
 	"crypto/tls"
-	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -11,6 +10,7 @@ import (
 	"github.com/byzk-worker/go-db-utils/sqlite"
 	"github.com/go-base-lib/goextension"
 	"github.com/go-base-lib/logs"
+	"github.com/golang-jwt/jwt/v4"
 	"github.com/teamManagement/common/conn"
 	"net"
 	"strings"
@@ -83,6 +83,14 @@ const (
 	autoLoginSettingKey = "USER_CREDENTIALS"
 )
 
+func ClearAutoLoginInfo() {
+	autoLoginSetting := &vos.Setting{
+		Name: autoLoginSettingKey,
+	}
+	sqlite.Db().Model(autoLoginSetting).Delete(autoLoginSetting)
+	Logout()
+}
+
 func AutoLogin() (res bool) {
 	autoLoginSetting := &vos.Setting{
 		Name: autoLoginSettingKey,
@@ -114,18 +122,23 @@ func AutoLogin() (res bool) {
 	return true
 }
 
-func Login(username, password string) error {
+func Login(username, password string) (err error) {
 	lock.Lock()
 	defer lock.Unlock()
 	Logout()
 
-	var err error
-	dial, err := tls.Dial("tcp", ServerAddress, generateTLSConfig())
+	dial, err := tls.Dial("tcp", ServerAddress, tools.GenerateTLSConfig())
 	if err != nil {
 		return fmt.Errorf("连接远程服务失败: %s", err.Error())
 	}
 
 	connWrapper := conn.NewWrapper(dial)
+	defer func() {
+		if err != nil {
+			connWrapper.WriteErrMessage(err.Error())
+			_ = dial.Close()
+		}
+	}()
 
 	if err = connWrapper.
 		WriteByte(1).
@@ -153,7 +166,8 @@ func Login(username, password string) error {
 
 	jwtTokenStr := string(jwtTokenBytes)
 
-	jwtDataBytes, err := base64.StdEncoding.DecodeString(string(jwtSplit[1]))
+	//jwtDataBytes, err := base64.StdEncoding.DecodeString(string(jwtSplit[1]))
+	jwtDataBytes, err := jwt.DecodeSegment(string(jwtSplit[1]))
 	if err != nil {
 		return fmt.Errorf("解析token内的数据失败")
 	}
@@ -184,6 +198,7 @@ func Login(username, password string) error {
 
 	loginOk = true
 
+	sqlite.Db().Table("app-" + nowUserInfo.Id + "-0").AutoMigrate(&vos.Setting{})
 	connCloseCh = make(chan struct{}, 1)
 	go userConnHandler(connWrapper, dial)
 
@@ -257,6 +272,9 @@ func userConnHandler(connWrapper *conn.Wrapper, dial net.Conn) {
 			if err := serverCmdHandler(code, cmdCh, dataCh); err != nil {
 				return
 			}
+		case err := <-errCh:
+			logs.Debugf("TCP通道监听返回错误: %s， 将要关闭TCP通道", err.Error())
+			return
 		}
 	}
 }
@@ -395,26 +413,4 @@ func NowUser() *UserInfo {
 	defer lock.Unlock()
 
 	return nowUserInfo
-}
-
-func generateTLSConfig() *tls.Config {
-
-	caCertPool := x509.NewCertPool()
-	caCertPool.AppendCertsFromPEM(tools.CaCertBytes)
-
-	tlsCert, err := tls.X509KeyPair(tools.ClientCertBytes, tools.ClientKeyBytes)
-	if err != nil {
-		panic(err)
-	}
-	return &tls.Config{
-		Certificates: []tls.Certificate{tlsCert},
-		ClientCAs:    caCertPool,
-		//ClientAuth:         tls.RequireAndVerifyClientCert,
-		InsecureSkipVerify: true,
-		//CipherSuites: []uint16{
-		//	tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
-		//	tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
-		//},
-		//NextProtos: []string{"team manager platform"},
-	}
 }

@@ -275,11 +275,17 @@ func initWs(engine *gin.Engine) {
 		wrapper.registryHandler("checkIsLogin", socketHandlerCheckIsLogin)
 		wrapper.registryHandler("login", socketHandlerLogin)
 		wrapper.registryHandler("autoLogin", socketHandlerAutoLogin)
+		wrapper.registryHandler("logout", socketHandlerLogout)
 		wrapper.loop()
 	})
 }
 
 var (
+	socketHandlerLogout SocketHandlerFn = func(content *SocketMessageContent, wrapper *SocketWrapper) error {
+		remoteserver.ClearAutoLoginInfo()
+		return content.Callback(true)
+	}
+
 	socketHandlerAutoLogin SocketHandlerFn = func(content *SocketMessageContent, wrapper *SocketWrapper) (err error) {
 		return content.Callback(remoteserver.AutoLogin())
 	}

@@ -13,25 +13,27 @@ import (
 type WatchRunFn func(config *Info)
 
 var (
-	configDirPath = filepath.Join(sysuser.HomeDir(), ".teamManager")
+	configDirPath = filepath.Join(sysuser.HomeDir(), ".teamwork")
 )
 
 var (
 	configFilePath   string
 	databaseFilePath string
 	logDirPath       string
+	cacheFilePath    string
 )
 
 var (
 	configWatchRunList = make([]WatchRunFn, 0, 16)
 
-	currentConfig *Info
+	CurrentConfig *Info
 )
 
 func initConfigAboutPath() {
 	configFilePath = filepath.Join(configDirPath, "config.toml")
 	databaseFilePath = filepath.Join(configDirPath, "db", "local.data")
 	logDirPath = filepath.Join(configDirPath, "logs")
+	cacheFilePath = filepath.Join(configDirPath, ".cache", "file")
 }
 
 func LoadConfig(configDir string) {
@@ -46,6 +48,7 @@ func LoadConfig(configDir string) {
 	viper.SetDefault("database.path", databaseFilePath)
 	viper.SetDefault("logs.level", "info")
 	viper.SetDefault("logs.path", logDirPath)
+	viper.SetDefault("cache.file", cacheFilePath)
 
 	stat, err := os.Stat(configFilePath)
 	if err != nil || stat.IsDir() {
@@ -62,7 +65,7 @@ func LoadConfig(configDir string) {
 		errors.ExitConfigFileRead.Println("读取配置文件内容失败: %s", err.Error())
 	}
 
-	if err = viper.Unmarshal(&currentConfig); err != nil {
+	if err = viper.Unmarshal(&CurrentConfig); err != nil {
 		errors.ExitConfigFileParser.Println("配置文件解析失败: %s", err.Error())
 	}
 
@@ -76,14 +79,14 @@ func onConfigChange(in fsnotify.Event) {
 		return
 	}
 
-	if err := viper.Unmarshal(&currentConfig); err != nil {
+	if err := viper.Unmarshal(&CurrentConfig); err != nil {
 		logs.Warnf("配置文件已更新，但解析失败: %s", err.Error())
 		return
 	}
 
 	for i := range configWatchRunList {
 		fn := configWatchRunList[i]
-		fn(currentConfig)
+		fn(CurrentConfig)
 	}
 }
 
@@ -92,8 +95,13 @@ func AddWatchFn(fn WatchRunFn) {
 }
 
 func AddWatchAndNowExec(fn WatchRunFn) {
-	fn(currentConfig)
+	fn(CurrentConfig)
 	AddWatchFn(fn)
+}
+
+func CreateDirInConfigPath(dir string) (string, error) {
+	dir = filepath.Join(configDirPath, dir)
+	return dir, os.MkdirAll(dir, 0755)
 }
 
 func CreateFileInConfigPath(dir string, filename string) (*os.File, string, error) {

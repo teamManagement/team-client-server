@@ -39,7 +39,7 @@ jsonResult=$(cat <<- EOF
     },
     "localServer": {
       "linux": "$linuxClientServerSha512Sum",
-      "win": "$winClientServerSha512Sum"
+      "win32": "$winClientServerSha512Sum"
     }
   },
 EOF
