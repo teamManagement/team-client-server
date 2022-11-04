@@ -150,6 +150,8 @@ type Application struct {
 	HideInStore bool `json:"hideInStore,omitempty"`
 	// Debugging 是否正在调试中
 	Debugging bool `json:"debugging,omitempty"`
+	// UserId 用户Id
+	UserId string `json:"userId,omitempty"`
 }
 
 type ProxyHttpServerInfo struct {
