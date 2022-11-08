@@ -125,6 +125,7 @@ declare global {
     registerAccelerator?: boolean
     submenu?: MenuItemOptions[]
     id?: string
+    click?: () => void
     before?: string[]
     after?: string[]
     beforeGroupContaining?: string[]
@@ -138,10 +139,16 @@ declare global {
     popup(): Promise<void>
   }
 
-  //#endregion
+  class MenuList {
+    public constructor(menuItems: MenuItemOptions[], menuId?: string)
+    items(): MenuItem[] | undefined
+    popup(): Promise<void>
+    click(itemId: string): void
+    id(): string
+  }
 
-  //#region 应用视图相关
-  class ApplicationView {
+   //#region 应用视图相关
+   class ApplicationView {
     public constructor(id: string, url: string)
     public init(): Promise<void>
     public destroy(): Promise<void>
@@ -161,6 +168,11 @@ declare global {
   interface Window {
 
     teamworkSDK: {
+      // contextmenu: {
+      //   build(menuItems: MenuItemOptions, menuId?: string): Menu
+      //   clear(id: string): void
+      //   clearAll(): void
+      // }
       store: {
         set(key: string, val: any): Promise<void>
         get<T>(key: string, defaultValue?: any): Promise<T>
@@ -198,6 +210,11 @@ declare global {
     }
     api: {
       login(username: string, password: string): Promise<void>
+      contextmenu: {
+        build(menuItems: MenuItemOptions[], menuId?: string): Menu
+        clear(menuId: string): void
+        clearAll(): void
+      }
     }
     proxyApi: ProxyApi
     app: {
@@ -246,6 +263,8 @@ declare global {
       // ): Promise<boolean>
       hangUp(): Promise<void>
       restore(): Promise<void>
+      install(appId: string): Promise<void>
+      uninstall(appId: string): Promise<void>
     }
   }
 }

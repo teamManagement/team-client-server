@@ -114,6 +114,11 @@
         width: 149px;
         border-radius: 6px;
       }
+
+      .onlyread {
+        color: #aaaaaa;
+        font-size: 16px;
+      }
     }
   }
 }
@@ -131,5 +136,10 @@
 .custom-modal {
   .ant-space.ant-space-horizontal.ant-space-align-center {
     display: none;
+  }
+
+  .ant-input-affix-wrapper:not(.ant-input-affix-wrapper-disabled):focus,
+  .ant-input-affix-wrapper:not(.ant-input-affix-wrapper-disabled):hover {
+    border-color: #0f72ef;
   }
 }

@@ -1,8 +1,8 @@
 import { Modal } from "antd";
+import {api} from '@byzk/teamwork-inside-sdk'
 
 
-
-export const getSignCert = async (errorCb?: any) => window.proxyApi.httpLocalServerProxy('')
+export const getSignCert = async (errorCb?: any) => api.proxyHttpCoreServer('')
 
 interface IHttpReq {
   url: string;
@@ -16,7 +16,7 @@ export async function apiPostRequest(params: IHttpReq): Promise<any> {
     return Promise.reject('请求参数不能为空！')
   }
   try {
-    const rst = await window.proxyApi.httpWebServerProxy(params.url, { jsonData: params.data })
+    const rst = await api.proxyHttpCoreServer(params.url, { jsonData: params.data })
     return Promise.resolve(rst)
   } catch (e: any) {
     Modal.error({ title: e.message, okText: '知道了' })
@@ -122,4 +122,25 @@ export async function updatePost(data: any): Promise<any> {
  */
 export async function getTypeList(data: any): Promise<any> {
   return await apiPostRequest({ url: "app/category/list", data })
+}
+
+
+
+/**
+ * 获取具体类别应用列表
+ * @param data 
+ * @returns 
+ */
+export async function getAppTypeList(appId: any): Promise<any> {
+  return await apiPostRequest({ url: `app/store/${appId}` })
+}
+
+
+/**
+* 获取具体类别应用列表
+* @param data 
+* @returns 
+*/
+export async function getAppUserList(appId: any): Promise<any> {
+ return await apiPostRequest({ url: `/user/get/${appId}` })
 }

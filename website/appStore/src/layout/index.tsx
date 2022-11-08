@@ -6,6 +6,7 @@ import { MenuItemInfo, UserInfo } from "./types";
 import { Routes, useLocation, useNavigate } from "react-router-dom";
 import { LayoutContentEles } from "./LayoutItemMap";
 import { MessagePlugin } from 'tdesign-react'
+import { api } from '@byzk/teamwork-inside-sdk'
 import "./index.less";
 
 const { Header, Sider, Content } = Layout;
@@ -149,21 +150,21 @@ export default function LayoutView(): React.ReactNode {
     navigate(targetPath);
   }, [menuItems, location.pathname, navigate]);
 
+  const getUserInfo = useCallback(async () => {
+    try {
+      const users = await api.proxyHttpLocalServer<UserInfo>('/user/now')
+      if (users.id !== '0') {
+        setMenuItems([])
+      }
+      setUserInfo(users)
+    } catch (e: any) {
+      message.error('获取用户信息失败: ' + ((e as any).message || e))
+    }
+  }, [])
 
   useEffect(() => {
-    window.proxyApi
-      .httpLocalServerProxy<UserInfo>('/user/now')
-      .then((user) => {
-        console.log('获取到的用户信息: ', user)
-        if (user.id !== '0') {
-          setMenuItems([])
-        }
-        setUserInfo(user)
-      })
-      .catch((e) => {
-        MessagePlugin.error('获取用户信息失败: ' + ((e as any).message || e))
-      })
-  }, [])
+    getUserInfo()
+  }, [getUserInfo])
 
   const headerItem = useCallback((menuItemsInfo: MenuItemInfo[]) => {
     return menuItemsInfo.map((m) => {
@@ -242,6 +243,7 @@ export default function LayoutView(): React.ReactNode {
                 margin: 0,
                 // overflow: 'auto',
                 background: "#fff",
+                overflow:'hidden',
               }}
             >
               <Routes>
