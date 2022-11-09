@@ -1,88 +1,98 @@
-import { Button, Divider, Menu } from "antd"
+import { Button, Divider, message } from "antd"
 import { FC, useCallback, useEffect, useRef, useState } from "react"
-import { PlusOutlined, SettingOutlined, QuestionCircleOutlined } from '@ant-design/icons'
-import MonacoEditor from "react-monaco-editor";
-import CustomDef from "./CustomDef";
+import { PlusOutlined } from '@ant-design/icons'
+import MonacoEditor from "react-monaco-editor"
+import { contextmenu, store, hosts } from '@byzk/teamwork-sdk'
+import CustomDef from "./CustomDef"
 import './index.less'
 
-function uuid() {
-  return '1xxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-    var r = Math.random() * 16 | 0,
-      v = c == 'x' ? r : (r & 0x3 | 0x8);
-    return v.toString(16);
-  });
-}
-
-const leftContextMenu = window.electron?.ContextMenu.getById('leftContextMenu')
-  ; (async () => {
-    if (!leftContextMenu) {
-      return
-    }
-    await leftContextMenu.clearItems()
-    await leftContextMenu.appendMenuItem({ id: 'use', label: '应用此方案' })
-    await leftContextMenu.appendMenuItem({ id: 'edit', label: '编辑' })
-    await leftContextMenu.appendMenuItem({ id: 'delete', label: '删除' })
-  })()
 
 const HostsDemo: FC = () => {
+  const contextMenuRef = useRef<MenuList | null>()
   const [text, setText] = useState("");
   const fnsRef = useRef<any>()
   const [menuList, setMenuList] = useState<any[]>([])
-  const [selectedId, setSelectId] = useState<string>('')
-  const [rightId, setRightId] = useState<string>()
+  const [selectedId, setSelectId] = useState<any>('')
+  const [rightId, setRightId] = useState<any>()
+  const [isDisabled, setIsDisabled] = useState<boolean>(false)
 
   const clickMenu = useCallback(async (id: any) => {
-    console.log(id);
     setSelectId(id)
-    await window.teamworkSDK.store.set('menuId', id)
-  }, [])
+    await store.set('menuId', id)
+    console.log(id);
+    const list = menuList.filter((m: any) => m.id === selectedId)
+    const textChange = text
+    console.log(textChange);
+
+    if (id === 'lookall') {
+      setText(`#--------- ${list[0].name} ------------\n\n` + textChange)
+    } else {
+      setText(textChange)
+    }
+  }, [text, menuList])
+
 
   useEffect(() => {
     const newMenuList = [
-      { id: uuid(), name: '开发环境' },
-      { id: uuid(), name: '测试环境' },
-      { id: uuid(), name: '生产环境' }
+      { id: 123, name: '开发环境', text: '' },
+      { id: 213, name: '测试环境', text: '' },
+      { id: 321, name: '生产环境', text: '' }
     ]
-    window.teamworkSDK.store.set('menuList', newMenuList)
+    store.set('menuList', newMenuList)
+    store.set('menuId', 123)
   }, [])
 
   const getMenu = useCallback(async () => {
-    const list = await window.teamworkSDK.store.get<any[]>('menuList')
-    const selId = await window.teamworkSDK.store.get<string>('menuId')
+    const list: any = await store.get('menuList')
+    const selId: any = await store.get('menuId')
     setMenuList(list)
     setSelectId(selId)
+    setRightId(selId)
+    const newText = await hosts.export()
+    console.log(newText.length, text.length);
+    if (newText.length === text.length) {
+      setIsDisabled(true)
+    }
+    setText(newText)
   }, [])
 
   useEffect(() => { getMenu() }, [getMenu])
 
-
-  useEffect(() => {
-    leftContextMenu.registerItemClick('use', async () => {
-      const rightClick = await window.teamworkSDK.store.get<string>('menuId')
-      setRightId(rightClick)
-    })
+  const rightClickMenu = useCallback(async () => {
+    const rightClick = await store.get<string>('menuId')
+    setRightId(rightClick)
+    saveText()
   }, [])
 
-  const onContextMenuFn = useCallback(async (id: any) => {
-    if (!leftContextMenu) { return }
-    await window.teamworkSDK.store.set('menuId', id)
-    leftContextMenu.popup()
-  }, [leftContextMenu])
+
+  useEffect(() => {
+    contextMenuRef.current = contextmenu.build([
+      { label: '应用此方案', click: () => rightClickMenu() },
+      { label: '编辑' },
+      { label: '删除' },
+    ])
+    return () => {
+      contextmenu.clearAll()
+      contextMenuRef.current = null
+    }
+  }, [])
+
+
+  const onContextMenuWrapper = useCallback(async (id: any) => {
+    await store.set('menuId', id)
+    if (contextMenuRef.current) {
+      contextMenuRef.current.popup()
+    }
+  }, [contextMenuRef])
+
 
   const saveText = useCallback(async () => {
-    // console.log(text);
-    console.log(selectedId);
-    console.log(menuList);
-
-    const list = menuList.filter((m) => m.id === selectedId)
-
-    console.log(list);
-
-    // const coverText = "#--------- 开发环境 ------------\n\n\n" + text
-    // await window.teamworkSDK.hosts.cover(coverText)
-    // const newText = await window.teamworkSDK.hosts.export()
-    // console.log(newText);
-  }, [text])
+    await hosts.cover(text)
+    const newText = await hosts.export()
+    console.log(newText)
+    setText(newText)
+    message.success('设置成功!')
+  }, [text, selectedId])
 
   return (
     <>
@@ -99,7 +109,7 @@ const HostsDemo: FC = () => {
           {menuList?.map((m: any) => {
             return <div
               className={m.id === selectedId ? "left-inline-menu select-item" : "left-inline-menu"}
-              onContextMenu={() => onContextMenuFn(m.id)}
+              onContextMenu={() => onContextMenuWrapper(m.id)}
               id={m.id} onClick={() => clickMenu(m.id)}>
               <div className="radio">
                 {m.id === rightId && <div className="radio-content" />}
@@ -116,8 +126,19 @@ const HostsDemo: FC = () => {
             <MonacoEditor
               theme="hc-light"
               value={text}
-              onChange={(value) => { setText(value) }}
+              onChange={async (value) => {
+                const newText = await hosts.export()
+                console.log(newText.length, text.length);
+                if (newText.length === text.length) {
+                  setIsDisabled(true)
+                }
+                setIsDisabled(false)
+                setText(value)
+              }}
               options={{
+                readOnly: selectedId === 'lookall' ? true : false,
+                selectionHighlight: false,
+                multiCursorModifier: 'ctrlCmd',
                 automaticLayout: true,
                 minimap: {
                   enabled: false,
@@ -127,7 +148,12 @@ const HostsDemo: FC = () => {
           </div>
           <Divider />
           <div className="footer">
-            <Button type='primary' onClick={() => saveText()}>保存(CTRL+S)</Button>
+            {
+              selectedId === 'lookall' ?
+                <div className="onlyread">只读, 无法直接编辑</div>
+                : <Button type='primary' disabled={isDisabled} onClick={() => saveText()}>保存(CTRL+S)</Button>
+            }
+
           </div>
         </div>
       </div>

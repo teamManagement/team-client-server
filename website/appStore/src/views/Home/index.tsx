@@ -1,66 +1,29 @@
-import { Button, Image, Spin } from 'antd';
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { PlusOutlined } from "@ant-design/icons";
-import './index.less'
-import AddNewApp from './AddNewApp';
+import { Image, Spin } from 'antd';
+import { useCallback, useEffect, useState } from 'react'
 import AppDetail from './AppDetail';
-import OtherApp from './OtherApp';
-import { IconPro } from '../../components/Icons';
 import { getTypeList } from '../../serve';
+import { store } from '@byzk/teamwork-sdk';
+import './index.less'
 
-function uuid() {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-    var r = Math.random() * 16 | 0,
-      v = c == 'x' ? r : (r & 0x3 | 0x8);
-    return v.toString(16);
-  });
-}
-
-const initImage = 'https://127.0.0.1:65528/icons/undefined.png'
 
 const Home: React.FC = () => {
-  const fnsRef = useRef<any>()
   const [menuList, setMenuList] = useState<any[]>([{}])
   const [selectedId, setSelectId] = useState<any>()
   const [firstId, setFirstId] = useState<string>()
   const [loading, setLoading] = useState<boolean>(false)
+  const [appList, setAppList] = useState<any>()
 
-  // const addnewAppFns = useCallback(async (newName: any) => {
-  //   let newMenuList: any[] = [...menuList]
-  //   const addInfo = { id: uuid(), title: `${newName}`, icon: '' }
-  //   newMenuList.push(addInfo)
-  //   await window.teamworkSDK.store.set("_content_menu_list", newMenuList)
-  //   await window.teamworkSDK.store.set(addInfo.id, addInfo)
-  //   const data: any = await window.teamworkSDK.store.get("_content_menu_list")
-  //   console.log("store: ", data)
-  //   setSelectId(addInfo.id)
-  //   setMenuList(newMenuList);
-  // }, [menuList])
-
-  const setFirstList = useCallback(async () => {
-    const addInfo = { id: uuid(), title: '首页', icon: '' }
-    await window.teamworkSDK.store.set("_content_menu_list", [addInfo])
-    await window.teamworkSDK.store.set(addInfo.id, addInfo)
-  }, [])
-
-  useEffect(() => {
-    setFirstList()
-  }, [setFirstList])
 
   const getFileList = useCallback(async () => {
-    const data: any = await window.teamworkSDK.store.get("_content_menu_list")
+    const data: any = await store.get("_content_menu_list")
     console.log("store: ", data)
-    setSelectId(data[0]?.id)
-    setFirstId(data[0]?.id)
+    setSelectId('1')
+    setFirstId('1')
     setMenuList(data)
-    window.teamworkSDK.store.set('appId', data[0]?.id)
-
+    store.set('appId', '1')
   }, [])
 
-  // const flushFileList = useCallback(async () => {
-  //   const data: any = await window.teamworkSDK.store.get("_content_menu_list")
-  //   setMenuList(data)
-  // }, [])
+
 
   useEffect(() => {
     getFileList()
@@ -69,14 +32,20 @@ const Home: React.FC = () => {
   const getList = useCallback(async () => {
     setLoading(true)
     const list = await getTypeList({})
-    console.log(list);
+    if (!list) {
+      setLoading(false)
+      return
+    }
+    // const newList = [{ id: '-1', name: '首页', }]
+    // await window.teamworkSDK.store.set(newList[0].id, newList[0])
+    // list?.map((m: any) => newList.push(m))
+    await store.set("_content_menu_list", list)
     setMenuList(list)
     setLoading(false)
   }, [])
 
-  useEffect(() => {
-    getList()
-  }, [getList])
+  useEffect(() => { getList() }, [getList])
+
 
   return (
     <>
@@ -104,7 +73,7 @@ const Home: React.FC = () => {
                   </div>
                 })}
               </div>
-              <AppDetail selectedId={selectedId} firstId={firstId} />
+              <AppDetail selectedId={selectedId} firstId={firstId} appList={appList} />
             </>
             :
             <div className="add-btn">

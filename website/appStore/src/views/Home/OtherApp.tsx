@@ -2,7 +2,6 @@ import { FC, useCallback, useEffect, useState } from "react";
 import Detail from "./Detail";
 import { Divider, Image, Tabs } from 'antd';
 import './otherApp.less';
-import SwiperDeatil from "./Swaiper";
 
 interface IOtherProps {
   getId: any,
