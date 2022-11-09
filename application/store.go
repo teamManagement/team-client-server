@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"github.com/byzk-worker/go-db-utils/sqlite"
 	"github.com/gin-gonic/gin"
-	"github.com/jinzhu/gorm"
 	ginmiddleware "github.com/teamManagement/gin-middleware"
+	"gorm.io/gorm"
 	"team-client-server/remoteserver"
 	"team-client-server/vos"
 )
@@ -70,7 +70,7 @@ var (
 			return errors.New("要查询的key不能为空")
 		}
 
-		count := 0
+		count := int64(0)
 		appDataStoreModel(ctx).Where("name=?", name).Count(&count)
 		return count > 0
 	}
@@ -86,9 +86,9 @@ var (
 
 func appDataStoreModel(ctx *gin.Context) *gorm.DB {
 	userId := ""
-	nowUserInfo := remoteserver.NowUser()
+	nowUserInfo, _ := remoteserver.NowUser()
 	if nowUserInfo != nil {
 		userId = nowUserInfo.Id
 	}
-	return sqlite.Db().Table("app-" + userId + "-" + ctx.Param("appId"))
+	return sqlite.Db().Table("app-" + userId + "-" + ctx.Param("appId")).Where("1=1")
 }

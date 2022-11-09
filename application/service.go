@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"github.com/byzk-worker/go-db-utils/sqlite"
 	"github.com/gin-gonic/gin"
-	"github.com/jinzhu/gorm"
 	ginmiddleware "github.com/teamManagement/gin-middleware"
+	"gorm.io/gorm"
+	"strings"
 	"team-client-server/remoteserver"
 	"team-client-server/vos"
 )
@@ -17,14 +18,78 @@ func initAppService(engine *gin.RouterGroup) {
 		POST("/info/desktop/list", ginmiddleware.WrapperResponseHandle(appInfoDesktopList)).
 		POST("/info/:id", ginmiddleware.WrapperResponseHandle(appInfoGetById)).
 		POST("/install/:appId", ginmiddleware.WrapperResponseHandle(appInstall)).
-		POST("/uninstall/:appId", ginmiddleware.WrapperResponseHandle(appUninstall))
+		POST("/uninstall/:appId", ginmiddleware.WrapperResponseHandle(appUninstall)).
+		POST("/debug/install", ginmiddleware.WrapperResponseHandle(appDebugInstall)).
+		POST("/debug/uninstall/:appId", ginmiddleware.WrapperResponseHandle(appDebugUninstall))
 }
 
 var (
+	// appDebugUninstall 本地调试应用卸载
+	appDebugUninstall ginmiddleware.ServiceFun = func(ctx *gin.Context) interface{} {
+
+		nowUser, err := remoteserver.NowUser()
+		if err != nil {
+			return err
+		}
+
+		appId := ctx.Param("appId")
+		if appId == "" {
+			return errors.New("未识别的应用ID")
+		}
+		if !strings.HasSuffix(appId, "-debug") {
+			appId += "-debug"
+		}
+		if err = sqlite.Db().Model(&vos.Application{}).Where("id=? and user_id=?", appId, nowUser.Id).Delete(&vos.Application{}).Error; err != nil {
+			return fmt.Errorf("删除应用调试信息失败: %s", err.Error())
+		}
+		return nil
+	}
+
+	// appDebugInstall 本地调试应用安装
+	appDebugInstall ginmiddleware.ServiceFun = func(ctx *gin.Context) interface{} {
+		nowUser, err := remoteserver.NowUser()
+		if err != nil {
+			return err
+		}
+
+		var addAppInfo *vos.Application
+		if err = ctx.ShouldBindJSON(&addAppInfo); err != nil {
+			return fmt.Errorf("解析待调试应用信息失败: %s", err.Error())
+		}
+
+		if addAppInfo.Id == "" {
+			return errors.New("应用ID不能为空")
+		}
+
+		if !strings.HasSuffix(addAppInfo.Id, "-debug") {
+			addAppInfo.Id += "-debug"
+		}
+
+		if addAppInfo.Type == vos.ApplicationTypeLocalWeb {
+			return errors.New("暂不支持本地文件的调试模式")
+		}
+
+		if addAppInfo.RemoteSiteUrl == "" {
+			return errors.New("应用地址不能为空")
+		}
+
+		addAppInfo.Debugging = true
+		addAppInfo.Url = addAppInfo.RemoteSiteUrl
+		addAppInfo.UserId = nowUser.Id
+		addAppInfo.Status = vos.ApplicationNormal
+
+		if err := sqlite.Db().Model(&vos.Application{}).Where("id=? and user_id=?", addAppInfo.Id, nowUser.Id).Save(&addAppInfo).Error; err != nil {
+			return fmt.Errorf("保存应用调试信息失败: %s", err.Error())
+		}
+
+		return nil
+	}
+
+	// appUninstall 应用卸载
 	appUninstall ginmiddleware.ServiceFun = func(ctx *gin.Context) interface{} {
-		nowUser := remoteserver.NowUser()
-		if nowUser == nil {
-			return errors.New("获取当前登录用户信息失败")
+		nowUser, err := remoteserver.NowUser()
+		if err == nil {
+			return err
 		}
 		appId := ctx.Param("appId")
 		if appId == "" {
@@ -40,16 +105,16 @@ var (
 	}
 	// appInstall 应用安装
 	appInstall ginmiddleware.ServiceFun = func(ctx *gin.Context) interface{} {
-		nowUser := remoteserver.NowUser()
-		if nowUser == nil {
-			return errors.New("获取当前登录用户信息失败")
+		nowUser, err := remoteserver.NowUser()
+		if err != nil {
+			return err
 		}
 		appId := ctx.Param("appId")
 		if appId == "" {
 			return errors.New("获取应用ID失败")
 		}
 
-		count := 0
+		count := int64(0)
 		if err := sqlite.Db().Model(&vos.Application{}).Where("id=? and user_id=?", appId, nowUser.Id).Count(&count).Error; err != nil {
 			return fmt.Errorf("查询应用安装情况失败: %s", err.Error())
 		}
@@ -79,13 +144,15 @@ var (
 			return fmt.Errorf("获取应用列表失败: %s", err.Error())
 		}
 
-		nowUser := remoteserver.NowUser()
-		if nowUser == nil {
-			return errors.New("获取当前用户的登录信息失败")
+		nowUser, err := remoteserver.NowUser()
+		if err != nil {
+			return err
 		}
 		if err := sqlite.Db().Transaction(func(tx *gorm.DB) error {
 			appModel := tx.Model(&vos.Application{})
-			appModel.Where("debugging is null or not debugging").Delete(&vos.Application{})
+			appModel.Where("debugging is null or not debugging").UpdateColumns(&vos.Application{
+				Status: vos.ApplicationStatusTakeDown,
+			})
 			for i := range appList {
 				appInfo := appList[i]
 				if appInfo.Type == vos.ApplicationTypeRemoteWeb {
@@ -93,7 +160,7 @@ var (
 				}
 
 				appInfo.UserId = nowUser.Id
-				if err := appModel.Create(appInfo).Error; err != nil {
+				if err := tx.Model(&vos.Application{}).Where("id=?", appInfo.Id).UpdateColumns(appInfo).Error; err != nil {
 					return fmt.Errorf("保存应用信息失败: %s", err.Error())
 				}
 				tx.Table("app-" + nowUser.Id + "-" + appInfo.Id).AutoMigrate(&vos.Setting{})
@@ -108,9 +175,9 @@ var (
 
 	// appInfoDesktopList 应用桌面信息列表获取
 	appInfoDesktopList ginmiddleware.ServiceFun = func(ctx *gin.Context) interface{} {
-		nowUser := remoteserver.NowUser()
-		if nowUser == nil {
-			return fmt.Errorf("获取当前用户信息失败")
+		nowUser, err := remoteserver.NowUser()
+		if err != nil {
+			return err
 		}
 		appList := make([]*vos.Application, 0)
 		if err := sqlite.Db().Where("status=? and user_id=?", vos.ApplicationNormal, nowUser.Id).Find(&appList).Error; err != nil && err != gorm.ErrRecordNotFound {

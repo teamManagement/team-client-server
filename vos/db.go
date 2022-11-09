@@ -111,7 +111,7 @@ const (
 // Application 应用信息
 type Application struct {
 	// Id 应用ID
-	Id string `json:"id,omitempty" gorm:"primary_key"`
+	Id string `json:"id,omitempty" gorm:"primaryKey"`
 	// Name 应用名称
 	Name string `json:"name,omitempty"`
 	// CategoryId 应用类别ID
@@ -151,7 +151,7 @@ type Application struct {
 	// Debugging 是否正在调试中
 	Debugging bool `json:"debugging,omitempty"`
 	// UserId 用户Id
-	UserId string `json:"userId,omitempty"`
+	UserId string `json:"userId,omitempty" gorm:"primaryKey"`
 }
 
 type ProxyHttpServerInfo struct {

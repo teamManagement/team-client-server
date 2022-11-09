@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/byzk-project-deploy/main-server v0.0.0-20220717065936-472d002c9389
-	github.com/byzk-worker/go-db-utils v0.0.0-20220706170431-c3faa2b05109
+	github.com/byzk-worker/go-db-utils v0.0.0-20221103152829-e99266f7ec9d
 	github.com/fsnotify/fsnotify v1.5.4
 	github.com/gin-gonic/gin v1.8.1
 	github.com/go-base-lib/coderutils v0.0.0-20221003111253-ea24e02dc926
@@ -14,9 +14,10 @@ require (
 	github.com/gorilla/websocket v1.5.0
 	github.com/jinzhu/gorm v1.9.16
 	github.com/kardianos/service v1.2.1
-	github.com/mattn/go-sqlite3 v1.14.0
+	github.com/mattn/go-sqlite3 v1.14.15
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/sirupsen/logrus v1.8.1
+	github.com/sjy3/go-keylock v0.0.0-20210305015907-e987e967d5a4
 	github.com/sony/sonyflake v1.0.0
 	github.com/spf13/viper v1.12.0
 	github.com/teamManagement/common v0.0.0-20221007164500-9e280480e36e
@@ -33,6 +34,7 @@ require (
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
+	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/leodido/go-urn v1.2.1 // indirect
 	github.com/lestrrat-go/file-rotatelogs v2.4.0+incompatible // indirect
@@ -46,7 +48,6 @@ require (
 	github.com/pelletier/go-toml/v2 v2.0.2 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/rifflock/lfshook v0.0.0-20180920164130-b9218ef580f5 // indirect
-	github.com/sjy3/go-keylock v0.0.0-20210305015907-e987e967d5a4 // indirect
 	github.com/spf13/afero v1.8.2 // indirect
 	github.com/spf13/cast v1.5.0 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
@@ -62,4 +63,6 @@ require (
 	gopkg.in/ini.v1 v1.66.4 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
+	gorm.io/driver/sqlite v1.4.3 // indirect
+	gorm.io/gorm v1.24.1 // indirect
 )
