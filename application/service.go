@@ -78,11 +78,17 @@ var (
 		addAppInfo.UserId = nowUser.Id
 		addAppInfo.Status = vos.ApplicationNormal
 
-		if err := sqlite.Db().Model(&vos.Application{}).Where("id=? and user_id=?", addAppInfo.Id, nowUser.Id).Save(&addAppInfo).Error; err != nil {
-			return fmt.Errorf("保存应用调试信息失败: %s", err.Error())
-		}
+		return sqlite.Db().Transaction(func(tx *gorm.DB) error {
+			if err := tx.Model(&vos.Application{}).Where("id=? and user_id=?", addAppInfo.Id, nowUser.Id).Save(&addAppInfo).Error; err != nil {
+				return fmt.Errorf("保存应用调试信息失败: %s", err.Error())
+			}
 
-		return nil
+			if err := tx.Table(getAppStoreTableName(addAppInfo.Id, nowUser.Id)).AutoMigrate(&vos.Application{}); err != nil {
+				return fmt.Errorf("创建应用store存储区失败: %s", err.Error())
+			}
+
+			return nil
+		})
 	}
 
 	// appUninstall 应用卸载
@@ -100,8 +106,15 @@ var (
 			return err
 		}
 
-		sqlite.Db().Model(&vos.Application{}).Where("id=? and user_id=?", appId, nowUser.Id).Delete(&vos.Application{})
-		return nil
+		return sqlite.Db().Transaction(func(tx *gorm.DB) error {
+			if err = tx.Migrator().DropTable(getAppStoreTableName(appId, nowUser.Id)); err != nil {
+				return fmt.Errorf("删除应用存储失败: %s", err.Error())
+			}
+			if err = tx.Model(&vos.Application{}).Where("id=? and user_id=?", appId, nowUser.Id).Delete(&vos.Application{}).Error; err != nil {
+				return fmt.Errorf("删除应用数据失败: %s", err.Error())
+			}
+			return nil
+		})
 	}
 	// appInstall 应用安装
 	appInstall ginmiddleware.ServiceFun = func(ctx *gin.Context) interface{} {

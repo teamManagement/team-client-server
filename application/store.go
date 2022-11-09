@@ -90,5 +90,9 @@ func appDataStoreModel(ctx *gin.Context) *gorm.DB {
 	if nowUserInfo != nil {
 		userId = nowUserInfo.Id
 	}
-	return sqlite.Db().Table("app-" + userId + "-" + ctx.Param("appId")).Where("1=1")
+	return sqlite.Db().Table(getAppStoreTableName(ctx.Param("appId"), userId)).Where("1=1")
+}
+
+func getAppStoreTableName(appId, userId string) string {
+	return "app-" + userId + "-" + appId
 }
