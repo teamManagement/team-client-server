@@ -39,10 +39,11 @@ var (
 		if !strings.HasSuffix(appId, "-debug") {
 			appId += "-debug"
 		}
-		if err = sqlite.Db().Model(&vos.Application{}).Where("id=? and user_id=?", appId, nowUser.Id).Delete(&vos.Application{}).Error; err != nil {
-			return fmt.Errorf("删除应用调试信息失败: %s", err.Error())
-		}
-		return nil
+
+		return sqlite.Db().Transaction(func(tx *gorm.DB) error {
+			return appHandlerUninstallInfo(tx, nowUser.Id, appId)
+		})
+
 	}
 
 	// appDebugInstall 本地调试应用安装
@@ -79,22 +80,14 @@ var (
 		addAppInfo.Status = vos.ApplicationNormal
 
 		return sqlite.Db().Transaction(func(tx *gorm.DB) error {
-			if err := tx.Model(&vos.Application{}).Where("id=? and user_id=?", addAppInfo.Id, nowUser.Id).Save(&addAppInfo).Error; err != nil {
-				return fmt.Errorf("保存应用调试信息失败: %s", err.Error())
-			}
-
-			if err := tx.Table(getAppStoreTableName(addAppInfo.Id, nowUser.Id)).AutoMigrate(&vos.Application{}); err != nil {
-				return fmt.Errorf("创建应用store存储区失败: %s", err.Error())
-			}
-
-			return nil
+			return appHandlerInstallInfo(tx, addAppInfo, nowUser.Id)
 		})
 	}
 
 	// appUninstall 应用卸载
 	appUninstall ginmiddleware.ServiceFun = func(ctx *gin.Context) interface{} {
 		nowUser, err := remoteserver.NowUser()
-		if err == nil {
+		if err != nil {
 			return err
 		}
 		appId := ctx.Param("appId")
@@ -107,13 +100,7 @@ var (
 		}
 
 		return sqlite.Db().Transaction(func(tx *gorm.DB) error {
-			if err = tx.Migrator().DropTable(getAppStoreTableName(appId, nowUser.Id)); err != nil {
-				return fmt.Errorf("删除应用存储失败: %s", err.Error())
-			}
-			if err = tx.Model(&vos.Application{}).Where("id=? and user_id=?", appId, nowUser.Id).Delete(&vos.Application{}).Error; err != nil {
-				return fmt.Errorf("删除应用数据失败: %s", err.Error())
-			}
-			return nil
+			return appHandlerUninstallInfo(tx, nowUser.Id, appId)
 		})
 	}
 	// appInstall 应用安装
@@ -141,13 +128,9 @@ var (
 			return err
 		}
 
-		appInfo.UserId = nowUser.Id
-		if err := sqlite.Db().Model(&vos.Application{}).Where("id=? and user_id=?", appId, nowUser.Id).Delete(&vos.Application{}).
-			Create(appInfo).Error; err != nil {
-			return fmt.Errorf("保存应用信息失败: %s", err.Error())
-		}
-
-		return nil
+		return sqlite.Db().Transaction(func(tx *gorm.DB) error {
+			return appHandlerInstallInfo(tx, appInfo, nowUser.Id)
+		})
 	}
 
 	// appForceRefresh 应用列表强制刷新
@@ -168,15 +151,9 @@ var (
 			})
 			for i := range appList {
 				appInfo := appList[i]
-				if appInfo.Type == vos.ApplicationTypeRemoteWeb {
-					appInfo.Url = appInfo.RemoteSiteUrl
+				if err := appHandlerInstallInfo(tx, appInfo, nowUser.Id); err != nil {
+					return err
 				}
-
-				appInfo.UserId = nowUser.Id
-				if err := tx.Model(&vos.Application{}).Where("id=?", appInfo.Id).UpdateColumns(appInfo).Error; err != nil {
-					return fmt.Errorf("保存应用信息失败: %s", err.Error())
-				}
-				tx.Table("app-" + nowUser.Id + "-" + appInfo.Id).AutoMigrate(&vos.Setting{})
 			}
 			return nil
 		}); err != nil {
@@ -204,3 +181,56 @@ var (
 		return nil
 	}
 )
+
+// appHandlerUninstallInfo 处理应用
+func appHandlerUninstallInfo(db *gorm.DB, userId, appId string) error {
+	if userId == "" {
+		return errors.New("缺失当前用户信息")
+	}
+
+	if appId == "" {
+		return errors.New("缺失应用信息")
+	}
+
+	if err := db.Migrator().DropTable(getAppStoreTableName(appId, userId)); err != nil {
+		return fmt.Errorf("删除应用存储失败: %s", err.Error())
+	}
+
+	if err := db.Model(&vos.Application{}).Where("id=? and user_id=?", appId, userId).Delete(&vos.Application{}).Error; err != nil {
+		return fmt.Errorf("删除应用信息失败: %s", err.Error())
+	}
+	return nil
+}
+
+// appHandlerInstallInfo 处理应用的安装信息
+func appHandlerInstallInfo(db *gorm.DB, appInfo *vos.Application, userId string) error {
+	if appInfo == nil || appInfo.Id == "" {
+		return errors.New("缺失应用信息或应用ID")
+	}
+
+	if userId == "" {
+		return errors.New("缺失当前用户信息")
+	}
+
+	appStoreTableName := getAppStoreTableName(appInfo.Id, userId)
+	appModel := db.Model(&vos.Application{})
+	switch appInfo.Type {
+	case vos.ApplicationTypeRemoteWeb:
+		appInfo.Url = appInfo.RemoteSiteUrl
+	case vos.ApplicationTypeLocalWeb:
+		return errors.New("暂不支持本地应用模式")
+	default:
+		return errors.New("未知的应用模式")
+	}
+	appInfo.UserId = userId
+
+	if err := db.Table(appStoreTableName).AutoMigrate(&vos.Setting{}); err != nil {
+		return fmt.Errorf("创建应用存储失败: %s", err.Error())
+	}
+
+	if err := appModel.Where("id=? and user_id=?", appInfo.Id, userId).Save(appInfo).Error; err != nil {
+		return fmt.Errorf("应用信息保存失败: %s", err.Error())
+	}
+
+	return nil
+}

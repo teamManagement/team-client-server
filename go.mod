@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/byzk-project-deploy/main-server v0.0.0-20220717065936-472d002c9389
-	github.com/byzk-worker/go-db-utils v0.0.0-20221103152829-e99266f7ec9d
+	github.com/byzk-worker/go-db-utils v0.0.0-20221104061600-53002225a1c9
 	github.com/fsnotify/fsnotify v1.5.4
 	github.com/gin-gonic/gin v1.8.1
 	github.com/go-base-lib/coderutils v0.0.0-20221003111253-ea24e02dc926
@@ -30,6 +30,7 @@ require (
 	github.com/go-playground/locales v0.14.0 // indirect
 	github.com/go-playground/universal-translator v0.18.0 // indirect
 	github.com/go-playground/validator/v10 v10.11.0 // indirect
+	github.com/go-sql-driver/mysql v1.6.0 // indirect
 	github.com/goccy/go-json v0.9.10 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
@@ -63,6 +64,7 @@ require (
 	gopkg.in/ini.v1 v1.66.4 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
+	gorm.io/driver/mysql v1.4.3 // indirect
 	gorm.io/driver/sqlite v1.4.3 // indirect
 	gorm.io/gorm v1.24.1 // indirect
 )
