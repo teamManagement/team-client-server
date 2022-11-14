@@ -1,23 +1,27 @@
 import { useEffect, useRef, useState } from 'react'
-import { Image, Tabs, Divider, Carousel, List, Avatar, Button } from 'antd'
+import { Image, Tabs, Divider, Carousel, List, Avatar, Button, message, Modal } from 'antd'
+import { CloudUploadOutlined, CloudDownloadOutlined } from '@ant-design/icons'
 import './index.less'
+import { applications } from '@byzk/teamwork-inside-sdk'
 
 
 interface IDeatilProps {
   fns: any,
+  instalList: any,
   finished: () => void,
 }
 
-const Detail: React.FC<IDeatilProps> = (props) => {
+const Detail: React.FC<IDeatilProps> = ({ fns, finished, instalList }) => {
   const { TabPane } = Tabs
   const [tabkey, setTabkey] = useState<any>('introduce')
   const [visible, setVisible] = useState<boolean>(false)
   const [versionList, setVersionList] = useState<any[]>([1, 2, 4, 5, 6, 7, 8, 9, 10, 11])
   const [appInfo, setAppInfo] = useState<any>()
+  const [selectId, setSelectId] = useState<string>('')
   const swiperRef = useRef<any>()
 
   useEffect(() => {
-    props.fns.current = {
+    fns.current = {
       show(info: any) {
         setVisible(true)
         setAppInfo(info)
@@ -45,6 +49,13 @@ const Detail: React.FC<IDeatilProps> = (props) => {
     { title: '柴敏' },
   ];
 
+  useEffect(() => {
+    if (!instalList || !appInfo) { return }
+    const installs = instalList?.filter((m: any) => m === appInfo.id)
+    setSelectId(installs[0])
+  }, [])
+
+
   return (
     <>
       {visible && <div className='detail'>
@@ -54,7 +65,23 @@ const Detail: React.FC<IDeatilProps> = (props) => {
             <div className='item' style={{ fontSize: 16, fontWeight: 'bold' }}>{appInfo?.name}</div>
             <div className='item'>版本: {appInfo?.version}</div>
             <div className='item'>开发者: 柴哈哈</div>
-            <div className='item other-item' dangerouslySetInnerHTML={{ __html: '描述: '+appInfo?.desc }} />
+            <div className='item other-item' dangerouslySetInnerHTML={{ __html: '描述: ' + appInfo?.desc }} />
+          </div>
+          <div>
+            <Button danger={appInfo.id === selectId ? true : false} icon={appInfo.id === selectId ? <CloudDownloadOutlined /> : <CloudUploadOutlined />} type='primary'
+              onClick={async () => {
+                try {
+                  if (appInfo.id === selectId) {
+                    await applications.uninstall(appInfo.id)
+                  } else {
+                    await applications.install(appInfo.id)
+                  }
+                  finished()
+                  message.success(appInfo.id === selectId ? '卸载成功' : '安装成功')
+                } catch (e: any) {
+                  Modal.error({ title: e.message, okText: '知道了' })
+                }
+              }}>{selectId && appInfo.id === selectId ? '卸载' : '安装'}</Button>
           </div>
         </div>
         <div className='content-div'>
@@ -70,8 +97,8 @@ const Detail: React.FC<IDeatilProps> = (props) => {
                   <div className="swiper-button-next" onClick={() => swiperRef.current?.next()} />
                 </div>
                 <div className='desc-div'>
-                  <h1 style={{fontSize:16,fontWeight:'bold'}}>长描述: </h1>
-                  <div dangerouslySetInnerHTML={{ __html: appInfo?.desc }}/>
+                  <h1 style={{ fontSize: 16, fontWeight: 'bold' }}>长描述: </h1>
+                  <div dangerouslySetInnerHTML={{ __html: appInfo?.desc }} />
                 </div>
               </div>
             </TabPane>

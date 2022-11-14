@@ -1,4 +1,4 @@
-import { Image, Spin } from 'antd';
+import { Image, Modal, Spin } from 'antd';
 import { useCallback, useEffect, useState } from 'react'
 import AppDetail from './AppDetail';
 import { getTypeList } from '../../serve';
@@ -30,18 +30,16 @@ const Home: React.FC = () => {
   }, [getFileList])
 
   const getList = useCallback(async () => {
-    setLoading(true)
-    const list = await getTypeList({})
-    if (!list) {
+    try {
+      setLoading(true)
+      const list = await getTypeList({})
+      await store.set("_content_menu_list", list)
+      setMenuList(list)
+    } catch (e: any) {
+      Modal.error({ title: e.message })
+    } finally {
       setLoading(false)
-      return
     }
-    // const newList = [{ id: '-1', name: '首页', }]
-    // await window.teamworkSDK.store.set(newList[0].id, newList[0])
-    // list?.map((m: any) => newList.push(m))
-    await store.set("_content_menu_list", list)
-    setMenuList(list)
-    setLoading(false)
   }, [])
 
   useEffect(() => { getList() }, [getList])

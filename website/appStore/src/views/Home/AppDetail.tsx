@@ -1,17 +1,18 @@
-import { Button, Divider, Image, message, Spin } from "antd";
+import { Button, Divider, Image, message, Modal, Spin } from "antd";
 import { FC, useCallback, useEffect, useRef, useState } from "react";
 import { IconPro } from "../../components/Icons";
-import {CloudDownloadOutlined,CloudUploadOutlined} from '@ant-design/icons';
+import { CloudDownloadOutlined, CloudUploadOutlined } from '@ant-design/icons';
 import { getAppTypeList } from "../../serve";
 import Detail from "./Detail";
-import {store} from '@byzk/teamwork-sdk';
-import {applications} from '@byzk/teamwork-inside-sdk';
+import { store } from '@byzk/teamwork-sdk';
+import { applications } from '@byzk/teamwork-inside-sdk';
 
 
 interface IAppDetailProps {
   selectedId: any,
   firstId: any,
   appList: any
+
 }
 
 
@@ -30,6 +31,8 @@ const AppDetail: FC<IAppDetailProps> = (props) => {
   const getAppList = useCallback(async () => {
     if (!props.selectedId) { return }
     const list = await getAppTypeList(props.selectedId)
+    console.log(list);
+
     if (list?.appList.length === 0) { return }
     setIfInstall(list?.appInstallationIdList)
     setList(list?.appList)
@@ -40,7 +43,7 @@ const AppDetail: FC<IAppDetailProps> = (props) => {
   useEffect(() => { getAppList() }, [getAppList])
 
   const divList = list?.map((m, i) => {
-    const stallId = ifInstall.filter(item => item === m.id)
+    const stallId = ifInstall?.filter(item => item === m.id)
 
     return <div className="small-div">
       <div className="list-div" onClick={() => {
@@ -55,18 +58,28 @@ const AppDetail: FC<IAppDetailProps> = (props) => {
       </div>
       <div className="footer">
         {stallId && stallId[0] === m.id ? <Button type='primary' icon={<CloudDownloadOutlined />} danger onClick={async () => {
-          setLoading(true)
-          await applications.uninstall(m.id)
-          getAppList()
-          setLoading(false)
-          message.success('卸载成功')
+          try {
+            setLoading(true)
+            await applications.uninstall(m.id)
+            getAppList()
+            message.success('卸载成功')
+          } catch (e: any) {
+            Modal.error({ title: e.message, okText: '知道了' })
+          } finally {
+            setLoading(false)
+          }
         }}>卸载</Button> :
           <Button type='primary' icon={<CloudUploadOutlined />} onClick={async () => {
-            setLoading(true)
-            await applications.install(m.id)
-            getAppList()
-            setLoading(false)
-            message.success('安装成功')
+            try {
+              setLoading(true)
+              await applications.install(m.id)
+              getAppList()
+              message.success('安装成功')
+            } catch (e: any) {
+              Modal.error({ title: e.message, okText: '知道了' })
+            } finally {
+              setLoading(false)
+            }
           }}>安装</Button>
         }
       </div>
@@ -119,7 +132,7 @@ const AppDetail: FC<IAppDetailProps> = (props) => {
         setIfDetail(false)
         fnsRef.current.close()
       }}><IconPro style={{ fontSize: 26 }} type='icon-fanhui' /></div>}
-      <Detail fns={fnsRef} finished={() => { }} />
+      <Detail fns={fnsRef} finished={() => getAppList()} instalList={ifInstall} />
     </>
   )
 }
