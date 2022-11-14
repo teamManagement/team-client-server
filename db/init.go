@@ -5,7 +5,6 @@ import (
 	dbutils "github.com/byzk-worker/go-db-utils"
 	"github.com/byzk-worker/go-db-utils/sqlite"
 	"github.com/go-base-lib/logs"
-	_ "github.com/mattn/go-sqlite3"
 	"os"
 	"path/filepath"
 	"team-client-server/config"
@@ -40,11 +39,11 @@ func configChange(config *config.Info) {
 
 func initDataTable() {
 	if err := sqlite.Db().
-		AutoMigrate(&vos.Setting{}).
-		AutoMigrate(&vos.Setting{}).
-		AutoMigrate(&vos.ProxyHttpServerInfo{}).
-		AutoMigrate(&vos.ProxyHttpResponseCache{}).
-		AutoMigrate(&vos.Application{}).Error; err != nil {
+		AutoMigrate(&vos.Setting{},
+			&vos.Setting{},
+			&vos.ProxyHttpServerInfo{},
+			&vos.ProxyHttpResponseCache{},
+			&vos.Application{}); err != nil {
 		logs.Fatalf("初始化数据库信息失败: %s")
 		os.Exit(10)
 	}

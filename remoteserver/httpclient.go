@@ -40,13 +40,11 @@ func RequestWebServiceWithData(url string, data any, res any) error {
 		if httpResult.Result == nil {
 			return err
 		}
-		if httpResult.Error {
-			return fmt.Errorf("%s: %s", httpResult.Code, httpResult.Msg)
-		}
+
 	}
 
-	if res == nil {
-		return nil
+	if httpResult.Error {
+		return fmt.Errorf("%s: %s", httpResult.Code, httpResult.Msg)
 	}
 
 	marshal, err := json.Marshal(httpResult.Result)

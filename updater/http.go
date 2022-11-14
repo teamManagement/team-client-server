@@ -12,11 +12,11 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"runtime"
 	"team-client-server/config"
 	"team-client-server/remoteserver"
+	"team-client-server/tools"
 	"time"
 )
 
@@ -86,13 +86,15 @@ var (
 	}
 	// updaterUpdate 执行更新
 	updaterUpdate ginmiddleware.ServiceFun = func(ctx *gin.Context) interface{} {
-		fmt.Println("进入热更新方法")
+		logs.Info("进入热更新方法")
 		var updateInfo *UpdateInfo
 		if err := ctx.ShouldBindJSON(&updateInfo); err != nil {
+			logs.Errorf("解析更新数据失败: %s", err.Error())
 			return err
 		}
 
 		if execStat, err := os.Stat(updateInfo.Exec); err != nil || execStat.IsDir() {
+			logs.Errorf("解析更新可执行文件失败: %s", err.Error())
 			return err
 		}
 
@@ -123,43 +125,47 @@ var (
 			}
 		}
 
-		fmt.Println("更新数据检查完成, 准备进行热更替。。。")
-		if runtime.GOOS != "windows" {
-			go func() {
-				time.Sleep(3 * time.Second)
-				defer func() {
-					_ = os.Remove(willUpdateAsarFilePath)
-					args := make([]string, 0, 3)
-					if updateInfo.Debug {
-						args = append(args, updateInfo.WorkDir)
-						args = append(args, "__updater_start__")
-						args = append(args, "__debug_work_dir__="+updateInfo.WorkDir)
-					}
-					cmd := exec.Command(updateInfo.Exec, args...)
-					if updateInfo.Debug {
-						cmd.Dir = updateInfo.WorkDir
-					}
-					output, _ := cmd.CombinedOutput()
-					logs.Debugf("electron重启之后的输出: %s", string(output))
-				}()
-
-				f, err := os.OpenFile(willUpdateAsarFilePath, os.O_RDONLY, 0655)
-				if err != nil {
-					return
+		logs.Info("更新数据检查完成, 准备进行热更替。。。")
+		//if runtime.GOOS != "windows" {
+		go func() {
+			time.Sleep(3 * time.Second)
+			defer func() {
+				logs.Info("资源文件拷贝完成, 开始调用程序启动")
+				_ = os.Remove(willUpdateAsarFilePath)
+				args := make([]string, 0, 3)
+				args = append(args, updateInfo.WorkDir)
+				args = append(args, "__updater_start__")
+				if updateInfo.Debug {
+					args = append(args, "__debug_work_dir__="+updateInfo.WorkDir)
 				}
-				defer f.Close()
 
-				destF, err := os.OpenFile(updateInfo.Asar, os.O_CREATE|os.O_WRONLY, 0655)
-				if err != nil {
-					return
-				}
-				defer destF.Close()
-
-				_, _ = io.Copy(destF, f)
+				updateStart(updateInfo.Exec, updateInfo.WorkDir, args)
+				//cmd := exec.Command(updateInfo.Exec, args...)
+				//if updateInfo.Debug {
+				//	cmd.Dir = updateInfo.WorkDir
+				//}
+				//output, _ := cmd.CombinedOutput()
+				//logs.Infof("electron重启之后的输出: %s", string(output))
 			}()
-		} else {
-			return willUpdateAsarFilePath
-		}
+
+			logs.Info("开始拷贝资源文件...")
+			f, err := os.OpenFile(willUpdateAsarFilePath, os.O_RDONLY, 0655)
+			if err != nil {
+				return
+			}
+			defer f.Close()
+
+			destF, err := os.OpenFile(updateInfo.Asar, os.O_CREATE|os.O_WRONLY, 0655)
+			if err != nil {
+				return
+			}
+			defer destF.Close()
+
+			_, _ = io.Copy(destF, f)
+		}()
+		//} else {
+		//	return willUpdateAsarFilePath
+		//}
 		//else {
 		//	if updateInfo.ServerExePath == "" {
 		//		return errors.New("缺失可执行文件路径")
@@ -170,7 +176,7 @@ var (
 		//	fmt.Println("创建文件拷贝子进程...")
 		//	_, _ = os.StartProcess(updateInfo.ServerExePath, []string{"-cmd=updater", "-updateInfo=" + base64.StdEncoding.EncodeToString(marshal)}, nil)
 		//}
-		return true
+		return nil
 	}
 )
 
@@ -210,7 +216,8 @@ func downloadReleasePackage(t string, localSavePath string) error {
 }
 
 func requestToRemoteServer(url string, fn func(resp *http.Response) error) error {
-	resp, err := http.Get(remoteserver.LocalWebServerAddress + url)
+
+	resp, err := tools.DefaultHttpClient.Get(remoteserver.LocalWebServerAddress + url)
 	if err != nil {
 		return err
 	}

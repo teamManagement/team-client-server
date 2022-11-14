@@ -408,9 +408,13 @@ func Token() string {
 	return nowUserInfo.Token
 }
 
-func NowUser() *UserInfo {
+func NowUser() (*UserInfo, error) {
 	lock.Lock()
 	defer lock.Unlock()
 
-	return nowUserInfo
+	if nowUserInfo == nil {
+		return nil, errors.New("用户未登录")
+	}
+
+	return nowUserInfo, nil
 }

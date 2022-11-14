@@ -25,7 +25,11 @@ func initLocalService(engine *gin.Engine) {
 
 var (
 	userNowInfo ginmiddleware.ServiceFun = func(ctx *gin.Context) interface{} {
-		return remoteserver.NowUser()
+		nowUserInfo, err := remoteserver.NowUser()
+		if err != nil {
+			return err
+		}
+		return nowUserInfo
 	}
 
 	userNowStatus ginmiddleware.ServiceFun = func(ctx *gin.Context) interface{} {
