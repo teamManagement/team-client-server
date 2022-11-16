@@ -11,6 +11,7 @@ import (
 	"team-client-server/db"
 	"team-client-server/tools"
 	"team-client-server/updater"
+	"team-client-server/website"
 	"time"
 )
 
@@ -23,6 +24,7 @@ func Run() {
 	initProxyLocal443Config()
 	ginmiddleware.UseNotFoundHandle(engine)
 	InitIcons(engine)
+	website.InitAppWebSite(engine)
 	cache.InitHttpDownloadFileHand(engine)
 	// cache
 	engine.Any("/c/forward/:name/*path", proxyCacheForward)

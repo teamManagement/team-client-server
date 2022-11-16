@@ -21,6 +21,11 @@ func initAppService(engine *gin.RouterGroup) {
 		POST("/uninstall/:appId", ginmiddleware.WrapperResponseHandle(appUninstall)).
 		POST("/debug/install", ginmiddleware.WrapperResponseHandle(appDebugInstall)).
 		POST("/debug/uninstall/:appId", ginmiddleware.WrapperResponseHandle(appDebugUninstall))
+
+	remoteserver.RegistryInsideEvent(remoteserver.InsideEventNameFlushAppList, func(userInfo *remoteserver.UserInfo) error {
+		_, err := appForceFlushDesktop(userInfo)
+		return err
+	})
 }
 
 var (
@@ -135,32 +140,18 @@ var (
 
 	// appForceRefresh 应用列表强制刷新
 	appForceRefresh ginmiddleware.ServiceFun = func(ctx *gin.Context) interface{} {
-		var appList []*vos.Application
-		if err := remoteserver.RequestWebServiceWithResponse("/app/list", &appList); err != nil {
-			return fmt.Errorf("获取应用列表失败: %s", err.Error())
-		}
 
 		nowUser, err := remoteserver.NowUser()
 		if err != nil {
 			return err
 		}
-		if err := sqlite.Db().Transaction(func(tx *gorm.DB) error {
-			appModel := tx.Model(&vos.Application{})
-			appModel.Where("debugging is null or not debugging").UpdateColumns(&vos.Application{
-				Status: vos.ApplicationStatusTakeDown,
-			})
-			for i := range appList {
-				appInfo := appList[i]
-				if err := appHandlerInstallInfo(tx, appInfo, nowUser.Id); err != nil {
-					return err
-				}
-			}
-			return nil
-		}); err != nil {
+
+		if appList, err := appForceFlushDesktop(nowUser); err != nil {
 			return err
+		} else {
+			return appList
 		}
 
-		return appList
 	}
 
 	// appInfoDesktopList 应用桌面信息列表获取
@@ -181,6 +172,31 @@ var (
 		return nil
 	}
 )
+
+func appForceFlushDesktop(nowUser *remoteserver.UserInfo) ([]*vos.Application, error) {
+	var appList []*vos.Application
+	if err := remoteserver.RequestWebServiceWithResponse("/app/list", &appList); err != nil {
+		return nil, fmt.Errorf("获取应用列表失败: %s", err.Error())
+	}
+
+	if err := sqlite.Db().Transaction(func(tx *gorm.DB) error {
+		appModel := tx.Model(&vos.Application{})
+		appModel.Where("debugging is null or not debugging").UpdateColumns(&vos.Application{
+			Status: vos.ApplicationStatusTakeDown,
+		})
+		for i := range appList {
+			appInfo := appList[i]
+			if err := appHandlerInstallInfo(tx, appInfo, nowUser.Id); err != nil {
+				return err
+			}
+		}
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+
+	return appList, nil
+}
 
 // appHandlerUninstallInfo 处理应用
 func appHandlerUninstallInfo(db *gorm.DB, userId, appId string) error {
