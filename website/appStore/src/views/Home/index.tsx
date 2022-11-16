@@ -17,8 +17,9 @@ const Home: React.FC = () => {
   const getFileList = useCallback(async () => {
     const data: any = await store.get("_content_menu_list")
     console.log("store: ", data)
-    setSelectId('1')
-    setFirstId('1')
+    if (data.length === 0) { return }
+    setSelectId(data[0]?.id)
+    setFirstId(data[0]?.id)
     setMenuList(data)
     store.set('appId', '1')
   }, [])

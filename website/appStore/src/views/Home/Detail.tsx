@@ -55,7 +55,6 @@ const Detail: React.FC<IDeatilProps> = ({ fns, finished, instalList }) => {
     setSelectId(installs[0])
   }, [])
 
-
   return (
     <>
       {visible && <div className='detail'>
