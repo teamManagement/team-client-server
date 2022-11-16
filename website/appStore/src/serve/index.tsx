@@ -127,7 +127,7 @@ export async function getTypeList(data: any): Promise<any> {
 
 
 /**
- * 获取具体类别应用列表
+ * 获取具体类别应用详情
  * @param data 
  * @returns 
  */

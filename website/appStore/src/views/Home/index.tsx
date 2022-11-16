@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react'
 import AppDetail from './AppDetail';
 import { getTypeList } from '../../serve';
 import { store } from '@byzk/teamwork-sdk';
+import { ToolOutlined } from '@ant-design/icons';
 import './index.less'
 
 
@@ -45,7 +46,6 @@ const Home: React.FC = () => {
 
   useEffect(() => { getList() }, [getList])
 
-
   return (
     <>
       <Spin tip='内容正在加载。。。' spinning={loading}>
@@ -63,6 +63,7 @@ const Home: React.FC = () => {
                     >
                       <div className='icon-left'>
                         <Image src={m.icon} preview={false} width={20} />
+                        <ToolOutlined />
                       </div>
                       <div className='icon-name'>{m.name}</div>
                     </div>
