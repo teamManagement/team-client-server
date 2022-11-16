@@ -13,6 +13,7 @@ import (
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/teamManagement/common/conn"
 	"net"
+	"strconv"
 	"strings"
 	"sync"
 	"team-client-server/tools"
@@ -123,8 +124,9 @@ func AutoLogin() (res bool) {
 }
 
 func Login(username, password string) (err error) {
-	lock.Lock()
-	defer lock.Unlock()
+	if lock.TryLock() {
+		defer lock.Unlock()
+	}
 	Logout()
 
 	dial, err := tls.Dial("tcp", ServerAddress, tools.GenerateTLSConfig())
@@ -181,6 +183,10 @@ func Login(username, password string) (err error) {
 		return fmt.Errorf("解析用户信息失败： %s", err.Error())
 	}
 
+	if nowUserInfo.TokenExpire, err = strconv.ParseInt(dataWrapper.Expire, 10, 64); err != nil {
+		return fmt.Errorf("解析token有效期失败: %s", err.Error())
+	}
+
 	nowUserInfo.Token = jwtTokenStr
 
 	if err = connWrapper.WriteByte(6).Error(); err != nil {
@@ -198,7 +204,8 @@ func Login(username, password string) (err error) {
 
 	loginOk = true
 
-	sqlite.Db().Table("app-" + nowUserInfo.Id + "-0").AutoMigrate(&vos.Setting{})
+	_ = sqlite.Db().Table("app-" + nowUserInfo.Id + "-0").AutoMigrate(&vos.Setting{})
+
 	connCloseCh = make(chan struct{}, 1)
 	go userConnHandler(connWrapper, dial)
 
@@ -241,7 +248,13 @@ func userConnHandler(connWrapper *conn.Wrapper, dial net.Conn) {
 	go connReadHandler(connWrapper, cmdCh, operationCh, dataCh, errCh)
 
 	readDataFn := func() (goextension.Bytes, error) {
-		return <-dataCh, <-errCh
+		timeout := time.After(30 * time.Second)
+		select {
+		case <-timeout:
+			return nil, errors.New("数据读取超时")
+		case d := <-dataCh:
+			return d, <-errCh
+		}
 	}
 
 	writeDataFn := func(data []byte) error {
@@ -304,6 +317,29 @@ func tokenDelay(readDataFn func() (goextension.Bytes, error), writeDataFn func(d
 	refreshTokenBytes, err := readDataFn()
 	if err != nil {
 		return err
+	}
+
+	jwtSplit := bytes.Split(jwtTokenBytes, []byte("."))
+	if len(jwtSplit) != 3 {
+		return fmt.Errorf("用户凭证格式不正确")
+	}
+
+	jwtDataBytes, err := jwt.DecodeSegment(string(jwtSplit[1]))
+	if err != nil {
+		return fmt.Errorf("解析token内的数据失败")
+	}
+
+	var dataWrapper *JwtTokenDataWrapper
+	if err = json.Unmarshal(jwtDataBytes, &dataWrapper); err != nil {
+		return fmt.Errorf("解析token包装数据结构失败")
+	}
+
+	if err = json.Unmarshal(dataWrapper.Data, &nowUserInfo); err != nil {
+		return fmt.Errorf("解析用户信息失败： %s", err.Error())
+	}
+
+	if nowUserInfo.TokenExpire, err = strconv.ParseInt(dataWrapper.Expire, 10, 64); err != nil {
+		return fmt.Errorf("解析token有效期失败: %s", err.Error())
 	}
 
 	nowUserInfo.Token = string(jwtTokenBytes)
@@ -399,13 +435,12 @@ func LoginOk() bool {
 }
 
 func Token() string {
-	lock.Lock()
-	defer lock.Unlock()
-
-	if nowUserInfo == nil {
+	user, err := NowUser()
+	if err != nil {
 		return ""
 	}
-	return nowUserInfo.Token
+
+	return user.Token
 }
 
 func NowUser() (*UserInfo, error) {
@@ -414,6 +449,12 @@ func NowUser() (*UserInfo, error) {
 
 	if nowUserInfo == nil {
 		return nil, errors.New("用户未登录")
+	}
+
+	if time.Now().Unix() > nowUserInfo.TokenExpire {
+		if !AutoLogin() {
+			return nil, errors.New("用户登录信息失效")
+		}
 	}
 
 	return nowUserInfo, nil

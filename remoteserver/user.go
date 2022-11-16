@@ -180,4 +180,6 @@ type UserInfo struct {
 	Token string `json:"token,omitempty"`
 	// RefreshToken 刷新Token
 	RefreshToken string `json:"-"`
+	// TokenExpire token有效期
+	TokenExpire int64 `json:"-"`
 }

@@ -309,7 +309,16 @@ var (
 			return fmt.Errorf("错误的用户数据组包格式")
 		}
 
-		return remoteserver.Login(split[0], split[1])
+		if err = remoteserver.Login(split[0], split[1]); err != nil {
+			return err
+		}
+
+		nowUserInfo, err := remoteserver.NowUser()
+		if err == nil {
+			_ = remoteserver.InvokeInsideEvent(remoteserver.InsideEventNameFlushAppList, nowUserInfo)
+		}
+
+		return nil
 	}
 
 	socketHandlerCheckIsLogin SocketHandlerFn = func(content *SocketMessageContent, wrapper *SocketWrapper) error {
