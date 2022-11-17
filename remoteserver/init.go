@@ -2,12 +2,14 @@ package remoteserver
 
 import (
 	"bytes"
+	"crypto/sha1"
 	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/byzk-worker/go-db-utils/sqlite"
+	"github.com/go-base-lib/coderutils"
 	"github.com/go-base-lib/goextension"
 	"github.com/go-base-lib/logs"
 	"github.com/golang-jwt/jwt/v4"
@@ -188,6 +190,13 @@ func Login(username, password string) (err error) {
 	}
 
 	nowUserInfo.Token = jwtTokenStr
+
+	cachePasswd := nowUserInfo.Id + "_teamwork_cache_" + password
+	cachePasswdHash, err := coderutils.Hash(sha1.New(), []byte(cachePasswd))
+	if err != nil {
+		return fmt.Errorf("用户缓存帐号计算失败: %s", err.Error())
+	}
+	nowUserInfo.CachePassword = cachePasswdHash.ToHexStr()
 
 	if err = connWrapper.WriteByte(6).Error(); err != nil {
 		return fmt.Errorf("消息签收失败")

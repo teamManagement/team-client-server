@@ -7,7 +7,9 @@ import (
 	"team-client-server/tools"
 )
 
-func updateStart(cmdPath string, workDir string, args []string) {
+func updateStart(updateInfo *UpdateInfo, args []string) {
+	cmdPath := updateInfo.Exec
+	workDir := updateInfo.WorkDir
 	logs.Info("Windows程序更新UI重启...")
 	if workDir == "" {
 		workDir = cmdPath

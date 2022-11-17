@@ -138,8 +138,8 @@ func generatorServiceConfig(configDir string) *service.Config {
 		Description: "团队协作平台应用程序本地服务",
 		Arguments:   []string{"-configDir=" + configDir},
 		Option: map[string]interface{}{
-			"UserService": true,
-			"RunAtLoad":   true,
+			//"UserService": true,
+			"RunAtLoad": true,
 			"LaunchdConfig": `<?xml version='1.0' encoding='UTF-8'?>
 <!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN"
 "http://www.apple.com/DTDs/PropertyList-1.0.dtd" >

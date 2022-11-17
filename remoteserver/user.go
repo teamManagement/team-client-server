@@ -172,8 +172,8 @@ type UserInfo struct {
 	IsInitManger bool `json:"isInitManger,omitempty"`
 	// Icon 头像
 	Icon string `json:"icon,omitempty" gorm:"type:longtext;"`
-	// Password 用户密码
-	Password string `json:"password,omitempty"`
+	// CachePassword 用户密码
+	CachePassword string `json:"-"`
 	// Age 年龄
 	Age int `json:"age,omitempty" gorm:"-"`
 	// Token token字符串

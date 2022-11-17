@@ -1,7 +1,7 @@
 #!/bin/bash
 
-GOOS=linux GOARCH=amd64 go build -o teamClientServer main.go > /dev/null 2>&1
-CC=x86_64-w64-mingw32-gcc-posix CXX=x86_64-w64-mingw32-g++-posix GOOS=windows GOARCH=amd64 CGO_ENABLED=1 go build -o teamClientServer.exe main.go > /dev/null 2>&1
+GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o teamClientServer main.go > /dev/null 2>&1
+CC=x86_64-w64-mingw32-gcc-posix CXX=x86_64-w64-mingw32-g++-posix GOOS=windows GOARCH=amd64 CGO_ENABLED=1 go build -ldflags="-s -w" -o teamClientServer.exe main.go > /dev/null 2>&1
 
 externalProgramDir="externalProgram"
 

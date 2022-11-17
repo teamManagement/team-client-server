@@ -29,6 +29,7 @@ type UpdateInfo struct {
 	Gid                int    `json:"gid,omitempty"`
 	WorkDir            string `json:"workDir,omitempty"`
 	Debug              bool   `json:"debug,omitempty"`
+	Display            string `json:"display,omitempty"`
 }
 
 func InitUpdaterHttpRestful(engine *gin.Engine) {
@@ -78,11 +79,48 @@ var (
 			return err
 		}
 
-		if err := downloadReleasePackage("clientServer", filepath.Join(updaterStoreDir, "clientServer")); err != nil {
+		p := filepath.Join(updaterStoreDir, "clientServer")
+		if err := downloadReleasePackage("clientServer", p); err != nil {
 			return err
 		}
 
-		return filepath.Join(updaterStoreDir, "clientServer")
+		if runtime.GOOS != "windows" {
+			targetCopyPath := ctx.Query("_uPath")
+			f, err := os.OpenFile(p, os.O_RDONLY, 0777)
+			if err != nil {
+				return fmt.Errorf("文件打开失败: %s", err.Error())
+			}
+			defer f.Close()
+
+			tf, err := os.OpenFile(targetCopyPath, os.O_WRONLY|os.O_CREATE, 0777)
+			if err != nil {
+				return fmt.Errorf("打开目的地址失败: %s", err.Error())
+			}
+			defer tf.Close()
+
+			if _, err = io.Copy(tf, f); err != nil {
+				return fmt.Errorf("拷贝更新文件到目标失败: %s", err.Error())
+			}
+
+			if err = os.Chmod(p, 0755); err != nil {
+				return fmt.Errorf("重新付权失败: %s", err.Error())
+			}
+
+			resourceDir := filepath.Dir(targetCopyPath)
+			if err = os.Chmod(filepath.Join(resourceDir, "teamClientServer"), 0777); err != nil {
+				return fmt.Errorf("更改源teamClientServer文件权限失败: %s", err.Error())
+			}
+
+			if err = os.Chmod(targetCopyPath, 0777); err != nil {
+				return fmt.Errorf("更改更新服务包失败: %s", err.Error())
+			}
+
+			if err = os.Chmod(filepath.Dir(targetCopyPath), 0777); err != nil {
+				return fmt.Errorf("更改资源目录权限失败: %s", err.Error())
+			}
+
+		}
+		return p
 	}
 	// updaterUpdate 执行更新
 	updaterUpdate ginmiddleware.ServiceFun = func(ctx *gin.Context) interface{} {
@@ -139,7 +177,7 @@ var (
 					args = append(args, "__debug_work_dir__="+updateInfo.WorkDir)
 				}
 
-				updateStart(updateInfo.Exec, updateInfo.WorkDir, args)
+				updateStart(updateInfo, args)
 				//cmd := exec.Command(updateInfo.Exec, args...)
 				//if updateInfo.Debug {
 				//	cmd.Dir = updateInfo.WorkDir
@@ -149,13 +187,13 @@ var (
 			}()
 
 			logs.Info("开始拷贝资源文件...")
-			f, err := os.OpenFile(willUpdateAsarFilePath, os.O_RDONLY, 0655)
+			f, err := os.OpenFile(willUpdateAsarFilePath, os.O_RDONLY, 0777)
 			if err != nil {
 				return
 			}
 			defer f.Close()
 
-			destF, err := os.OpenFile(updateInfo.Asar, os.O_CREATE|os.O_WRONLY, 0655)
+			destF, err := os.OpenFile(updateInfo.Asar, os.O_CREATE|os.O_WRONLY, 0777)
 			if err != nil {
 				return
 			}
@@ -185,7 +223,7 @@ func downloadReleasePackage(t string, localSavePath string) error {
 		if resp.StatusCode < 200 || resp.StatusCode > 299 {
 			return errors.New(resp.Status)
 		}
-		f, err := os.OpenFile(localSavePath, os.O_CREATE|os.O_RDWR, 0655)
+		f, err := os.OpenFile(localSavePath, os.O_CREATE|os.O_RDWR, 0777)
 		if err != nil {
 			return err
 		}
