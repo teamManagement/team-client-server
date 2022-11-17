@@ -116,7 +116,7 @@ const AppDetail: FC<IAppDetailProps> = (props) => {
         setIfDetail(false)
         fnsRef.current.close()
         // }}><IconPro style={{ fontSize: 26 }} type='icon-fanhui' /></div>}
-      }}><span style={{ fontSize: 26 }}>←</span></div>}
+      }}><span style={{ fontSize: 26,marginTop:-10 }}>←</span></div>}
       <Detail fns={fnsRef} finished={() => getAppList()} instalList={ifInstall} />
     </>
   )

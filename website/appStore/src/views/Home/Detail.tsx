@@ -113,7 +113,7 @@ const Detail: React.FC<IDeatilProps> = ({ fns, finished, instalList }) => {
                 <List
                   itemLayout="horizontal"
                   dataSource={[
-                    { title: appInfo?.authorInfo?.id === '0' ? 'teamwork(平台) ' : '', desc: appInfo?.authorInfo.orgList[0].org.name },
+                    { title: appInfo?.authorInfo?.id === '0' ? 'teamwork(平台)' : '', desc: appInfo?.authorInfo.orgList[0].org.name },
                   ]}
                   renderItem={item => (
                     <List.Item>
