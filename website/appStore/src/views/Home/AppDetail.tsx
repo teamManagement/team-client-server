@@ -23,21 +23,22 @@ const AppDetail: FC<IAppDetailProps> = (props) => {
   const fnsRef = useRef<any>()
   const [appName, setAppName] = useState<string>()
   const [showOne, setShowOne] = useState<boolean>(true)
-  // const [showTwo, setShowTwo] = useState<boolean>(true)
   const [ifInstall, setIfInstall] = useState<any[]>([])
   const [loading, setLoading] = useState<boolean>(false)
 
 
   const getAppList = useCallback(async () => {
-    if (!props.selectedId) { return }
-    const list = await getAppTypeList(props.selectedId)
-    console.log(list);
-
-    if (list?.appList.length === 0) { return }
-    setIfInstall(list?.appInstallationIdList)
-    setList(list?.appList)
-    setIfDetail(false)
-    fnsRef.current.close()
+    try {
+      if (!props.selectedId) { return }
+      const list = await getAppTypeList(props.selectedId)
+      if (list?.appList.length === 0) { return }
+      setIfInstall(list?.appInstallationIdList)
+      setList(list?.appList)
+      setIfDetail(false)
+      fnsRef.current.close()
+    } catch (e: any) {
+      message.error(e.message)
+    }
   }, [props.selectedId])
 
   useEffect(() => { getAppList() }, [getAppList])
@@ -57,7 +58,7 @@ const AppDetail: FC<IAppDetailProps> = (props) => {
         </div>
       </div>
       <div className="footer">
-        {stallId && stallId[0] === m.id ? <Button type='primary' icon={<CloudDownloadOutlined />} danger onClick={async () => {
+        {stallId && stallId[0] === m.id ? <Button type='primary' style={{ borderRadius: 6 }} icon={<CloudDownloadOutlined />} danger onClick={async () => {
           try {
             setLoading(true)
             await applications.uninstall(m.id)
@@ -69,7 +70,7 @@ const AppDetail: FC<IAppDetailProps> = (props) => {
             setLoading(false)
           }
         }}>卸载</Button> :
-          <Button type='primary' icon={<CloudUploadOutlined />} onClick={async () => {
+          <Button type='primary' style={{ borderRadius: 6 }} icon={<CloudUploadOutlined />} onClick={async () => {
             try {
               setLoading(true)
               await applications.install(m.id)
@@ -104,28 +105,11 @@ const AppDetail: FC<IAppDetailProps> = (props) => {
             <div className='div-title'>
               <div style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 10 }}>
                 {appName}</div>
-              {/* {props.selectedId === props.firstId &&
-                <div>{showTwo ? <Button type='link' onClick={() => setShowTwo(false)}>查看全部</Button>
-                  : <Button type='link' onClick={() => setShowTwo(true)} icon={<IconPro type='icon-fanhui' />}>返回</Button>}</div>
-              } */}
             </div>
             <Divider />
             <div className="list">{divList}</div>
             <div style={{ height: 100 }}></div>
           </>}
-          {/* {showTwo && props.selectedId === props.firstId ?
-            <>
-              <div className='div-title'>
-                <div style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 10 }}>下载更多</div>
-                <div>{showOne ? <Button type='link' onClick={() => setShowOne(false)}>查看全部</Button>
-                  : <Button type='link' onClick={() => setShowOne(true)}><IconPro type='icon-fanhui' />返回</Button>}</div>
-              </div>
-              <Divider />
-              <div className="list" > {divList}</div>
-            </>
-            :
-            <></>
-          } */}
         </Spin>
       </div>}
       {ifDetail && <div className='callback' onClick={() => {

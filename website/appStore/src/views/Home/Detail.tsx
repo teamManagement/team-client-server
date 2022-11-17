@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
-import { Image, Tabs, Divider, Carousel, List, Avatar, Button, message, Modal } from 'antd'
-import { CloudUploadOutlined, CloudDownloadOutlined } from '@ant-design/icons'
-import './index.less'
+import { Image, Tabs, Divider, Carousel, List, Button, message, Modal } from 'antd'
 import { applications } from '@byzk/teamwork-inside-sdk'
+import { AppInfo } from '@byzk/teamwork-sdk'
+import './index.less'
 
 
 interface IDeatilProps {
@@ -19,6 +19,7 @@ const Detail: React.FC<IDeatilProps> = ({ fns, finished, instalList }) => {
   const [appInfo, setAppInfo] = useState<any>()
   const [selectId, setSelectId] = useState<string>('')
   const swiperRef = useRef<any>()
+
 
   useEffect(() => {
     fns.current = {
@@ -44,17 +45,13 @@ const Detail: React.FC<IDeatilProps> = ({ fns, finished, instalList }) => {
   })
 
 
-  const data = [
-    { title: '苏林鑫' },
-    { title: '柴敏' },
-  ];
-
   useEffect(() => {
     if (!instalList || !appInfo) { return }
+    console.log(instalList);
+
     const installs = instalList?.filter((m: any) => m === appInfo.id)
     setSelectId(installs[0])
-  }, [])
-
+  }, [appInfo, instalList])
 
   return (
     <>
@@ -63,25 +60,30 @@ const Detail: React.FC<IDeatilProps> = ({ fns, finished, instalList }) => {
           <div><Image width={140} src={appInfo?.icon} /></div>
           <div className='right'>
             <div className='item' style={{ fontSize: 16, fontWeight: 'bold' }}>{appInfo?.name}</div>
-            <div className='item'>版本: {appInfo?.version}</div>
-            <div className='item'>开发者: 柴哈哈</div>
+            <div className='item'>版本:&nbsp;&nbsp;{appInfo?.version}</div>
+            <div className='item'>开发者:&nbsp;&nbsp;teamwork</div>
             <div className='item other-item' dangerouslySetInnerHTML={{ __html: '描述: ' + appInfo?.desc }} />
           </div>
           <div>
-            <Button danger={appInfo.id === selectId ? true : false} icon={appInfo.id === selectId ? <CloudDownloadOutlined /> : <CloudUploadOutlined />} type='primary'
-              onClick={async () => {
+            {appInfo?.id === selectId ?
+              <Button className='newinstall' type='primary' danger onClick={async () => {
                 try {
-                  if (appInfo.id === selectId) {
-                    await applications.uninstall(appInfo.id)
-                  } else {
-                    await applications.install(appInfo.id)
-                  }
+                  await applications.uninstall(appInfo?.id)
                   finished()
-                  message.success(appInfo.id === selectId ? '卸载成功' : '安装成功')
+                  message.success('卸载成功')
                 } catch (e: any) {
                   Modal.error({ title: e.message, okText: '知道了' })
                 }
-              }}>{selectId && appInfo.id === selectId ? '卸载' : '安装'}</Button>
+              }}>卸载</Button>
+              : <Button className='newinstall' type='primary' onClick={async () => {
+                try {
+                  await applications.install(appInfo?.id as string)
+                  finished()
+                  message.success('安装成功')
+                } catch (e: any) {
+                  Modal.error({ title: e.message, okText: '知道了' })
+                }
+              }}>安装</Button>}
           </div>
         </div>
         <div className='content-div'>
@@ -90,7 +92,7 @@ const Detail: React.FC<IDeatilProps> = ({ fns, finished, instalList }) => {
               <div className='tab content'>
                 <div className='swiper-div'>
                   <Carousel className='swiper' autoplay dots ref={swiperRef}>
-                    {JSON.parse(appInfo?.slideshow).map((value: any) =>
+                    {JSON.parse(appInfo?.slideshow as any).map((value: any) =>
                       <Image height={300} src={value} />)}
                   </Carousel>
                   <div className="swiper-button-prev" onClick={() => swiperRef.current?.prev()} />
@@ -98,24 +100,26 @@ const Detail: React.FC<IDeatilProps> = ({ fns, finished, instalList }) => {
                 </div>
                 <div className='desc-div'>
                   <h1 style={{ fontSize: 16, fontWeight: 'bold' }}>长描述: </h1>
-                  <div dangerouslySetInnerHTML={{ __html: appInfo?.desc }} />
+                  <div dangerouslySetInnerHTML={{ __html: appInfo?.desc as string }} />
                 </div>
               </div>
             </TabPane>
-            <TabPane tab='版本记录' key='version'>
+            {(appInfo?.type) && <TabPane tab='版本记录' key='version'>
               <div className='tab' >{list}</div>
-            </TabPane>
+            </TabPane>}
             <TabPane tab='贡献人员' key='personList'>
               <div className='tab' >
                 <List
                   itemLayout="horizontal"
-                  dataSource={data}
+                  dataSource={[
+                    { title: appInfo?.authorInfo?.id === '0' ? 'teamwork(平台) ' : '', desc: appInfo?.authorInfo.orgList[0].org.name },
+                  ]}
                   renderItem={item => (
                     <List.Item>
                       <List.Item.Meta
-                        avatar={<Avatar src={appInfo?.icon} />}
-                        title={<Button type='link'>{item.title}</Button>}
-                        description="主要开发人员"
+                        avatar={<div className='personStyle'>{item.title.slice(item.title.length - 4, item.title.length - 2)}</div>}
+                        title={<a>{item.title + '部门：' + item.desc}</a>}
+                        description={appInfo?.authorInfo?.id === '0' ? '平台内置' : '辅助开发人员'}
                       />
                     </List.Item>
                   )}
