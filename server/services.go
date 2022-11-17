@@ -13,6 +13,7 @@ func initLocalService(engine *gin.Engine) {
 	{
 		engine.Group("/user").
 			POST("/now", ginmiddleware.WrapperResponseHandle(userNowInfo)).
+			POST("/cache/p", ginmiddleware.WrapperResponseHandle(userNowCachePasswd)).
 			POST("/status", ginmiddleware.WrapperResponseHandle(userNowStatus))
 	}
 
@@ -37,6 +38,14 @@ var (
 			return "online"
 		}
 		return "offline"
+	}
+
+	userNowCachePasswd ginmiddleware.ServiceFun = func(ctx *gin.Context) interface{} {
+		user, err := remoteserver.NowUser()
+		if err != nil {
+			return err
+		}
+		return user.CachePassword
 	}
 )
 
