@@ -41,6 +41,20 @@ const AppDetail: FC<IAppDetailProps> = (props) => {
     }
   }, [props.selectedId])
 
+  const getAppListFinished = useCallback(async () => {
+    try {
+      if (!props.selectedId) { return }
+      const list = await getAppTypeList(props.selectedId)
+      if (list?.appList.length === 0) { return }
+      setIfInstall(list?.appInstallationIdList)
+      setList(list?.appList)
+      setIfDetail(true)
+      fnsRef.current.close()
+    } catch (e: any) {
+      message.error(e.message)
+    }
+  }, [props.selectedId])
+
   useEffect(() => { getAppList() }, [getAppList])
 
   const divList = list?.map((m, i) => {
@@ -117,7 +131,7 @@ const AppDetail: FC<IAppDetailProps> = (props) => {
         fnsRef.current.close()
         // }}><IconPro style={{ fontSize: 26 }} type='icon-fanhui' /></div>}
       }}><span style={{ fontSize: 26,marginTop:-10 }}>←</span></div>}
-      <Detail fns={fnsRef} finished={() => getAppList()} instalList={ifInstall} />
+      <Detail fns={fnsRef} finished={() => getAppListFinished()} instalList={ifInstall} />
     </>
   )
 }
