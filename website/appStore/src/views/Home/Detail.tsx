@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Image, Tabs, Divider, Carousel, List, Button, message, Modal } from 'antd'
 import { applications } from '@byzk/teamwork-inside-sdk'
 import { AppInfo } from '@byzk/teamwork-sdk'
+import { CloudDownloadOutlined, CloudUploadOutlined } from '@ant-design/icons';
 import './index.less'
 
 
@@ -66,7 +67,7 @@ const Detail: React.FC<IDeatilProps> = ({ fns, finished, instalList }) => {
           </div>
           <div>
             {appInfo?.id === selectId ?
-              <Button className='newinstall' type='primary' danger onClick={async () => {
+              <Button className='newinstall' icon={<CloudDownloadOutlined />} type='primary' danger onClick={async () => {
                 try {
                   await applications.uninstall(appInfo?.id)
                   finished()
@@ -75,7 +76,7 @@ const Detail: React.FC<IDeatilProps> = ({ fns, finished, instalList }) => {
                   Modal.error({ title: e.message, okText: '知道了' })
                 }
               }}>卸载</Button>
-              : <Button className='newinstall' type='primary' onClick={async () => {
+              : <Button icon={<CloudUploadOutlined />} className='newinstall' type='primary' onClick={async () => {
                 try {
                   await applications.install(appInfo?.id as string)
                   finished()
@@ -117,8 +118,8 @@ const Detail: React.FC<IDeatilProps> = ({ fns, finished, instalList }) => {
                   renderItem={item => (
                     <List.Item>
                       <List.Item.Meta
-                        avatar={<div className='personStyle'>{item.title.slice(item.title.length - 4, item.title.length - 2)}</div>}
-                        title={<a>{item.title + '部门：' + item.desc}</a>}
+                        avatar={<div className='personStyle'>{item.title.slice(item.title.length - 3, item.title.length - 1)}</div>}
+                        title={<a>{item.title}</a>}
                         description={appInfo?.authorInfo?.id === '0' ? '平台内置' : '辅助开发人员'}
                       />
                     </List.Item>

@@ -115,7 +115,8 @@ const AppDetail: FC<IAppDetailProps> = (props) => {
       {ifDetail && <div className='callback' onClick={() => {
         setIfDetail(false)
         fnsRef.current.close()
-      }}><IconPro style={{ fontSize: 26 }} type='icon-fanhui' /></div>}
+        // }}><IconPro style={{ fontSize: 26 }} type='icon-fanhui' /></div>}
+      }}><span style={{ fontSize: 26 }}>←</span></div>}
       <Detail fns={fnsRef} finished={() => getAppList()} instalList={ifInstall} />
     </>
   )
