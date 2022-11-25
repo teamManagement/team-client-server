@@ -32,6 +32,8 @@ const AppDetail: FC<IAppDetailProps> = (props) => {
     try {
       if (!props.selectedId) { return }
       const list = await getAppTypeList(props.selectedId)
+      console.log(list);
+
       if (list?.appList.length === 0) { return }
       setIfInstall(list?.appInstallationIdList)
       setList(list?.appList)
@@ -44,7 +46,6 @@ const AppDetail: FC<IAppDetailProps> = (props) => {
 
   const divList = list?.map((m, i) => {
     const stallId = ifInstall?.filter(item => item === m.id)
-
     return <div className="small-div">
       <div className="list-div" onClick={() => {
         fnsRef.current.show(m)
