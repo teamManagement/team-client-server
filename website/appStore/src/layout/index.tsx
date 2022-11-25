@@ -78,6 +78,7 @@ export default function LayoutView(): React.ReactNode {
             contentMenuList = [
               { id: '456789', name: '/manage/types', title: '类别管理', icon: 'icon-yingyong', sort: 1 },
               { id: '456123', name: '/manage/apps', title: '应用管理', icon: 'icon-yingyong', sort: 1 },
+              { id: '456321', name: '/manage/userMgr', title: '管理员列表', icon: 'icon-yingyong', sort: 1 },
             ]
           }
           sessionStorage.setItem(
@@ -218,7 +219,9 @@ export default function LayoutView(): React.ReactNode {
             {topMenuItemEles}
           </Menu>
         </Header>}
-        <Layout>
+        <Layout style={{
+          margin: 20
+        }} >
           {menuContentItems.length > 0 && (
             <Sider width={200} className="site-layout-background-sider" >
               <Menu
@@ -239,11 +242,11 @@ export default function LayoutView(): React.ReactNode {
               className="site-layout-background"
               style={{
                 height: "100%",
-                // padding: 24,
+                padding: menuContentItems.length > 0 ? '24px 18px' : 0,
                 margin: 0,
-                // overflow: 'auto',
+                marginLeft: menuContentItems.length > 0 ? 20 : 0,
+                overflow: menuContentItems.length > 0 ? 'auto' : 'hidden',
                 background: "#fff",
-                overflow:'hidden',
               }}
             >
               <Routes>

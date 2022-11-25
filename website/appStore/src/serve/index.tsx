@@ -1,5 +1,5 @@
 import { Modal } from "antd";
-import {api} from '@byzk/teamwork-inside-sdk'
+import { api } from '@byzk/teamwork-inside-sdk'
 
 
 export const getSignCert = async (errorCb?: any) => api.proxyHttpCoreServer('')
@@ -19,7 +19,8 @@ export async function apiPostRequest(params: IHttpReq): Promise<any> {
     const rst = await api.proxyHttpCoreServer(params.url, { jsonData: params.data })
     return Promise.resolve(rst)
   } catch (e: any) {
-    Modal.error({ title: e.message, okText: '知道了' })
+    Modal.error({ title: e.message, okText: '知道了' });
+    params.errorCb?.(e.message);
     return
   } finally {
     params.finalCb?.()
@@ -142,5 +143,5 @@ export async function getAppTypeList(appId: any): Promise<any> {
 * @returns 
 */
 export async function getAppUserList(appId: any): Promise<any> {
- return await apiPostRequest({ url: `/user/get/${appId}` })
+  return await apiPostRequest({ url: `/user/get/${appId}` })
 }

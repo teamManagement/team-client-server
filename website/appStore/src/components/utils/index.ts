@@ -87,7 +87,7 @@ export const arrayObjectUtils = {
         }
         var rst: any[] = [];
         var idValues: any[] = [];
-        array.forEach((item:any) => {
+        array.forEach((item: any) => {
             if (isNull(item)) {
                 return;
             }
@@ -271,7 +271,7 @@ export const addPNGBase64Prefix = (str: any) => `data:image/png;base64,${str}`;
  */
 export const momentFormat = (time: any, formartter: string = 'YYYY-MM-DD HH:mm:ss') => {
     if (isNull(time)) {
-        return '';
+        return '-';
     }
     return moment(time).format(formartter);
 }
