@@ -25,6 +25,7 @@ require (
 )
 
 require (
+	github.com/eventials/go-tus v0.0.0-20220610120217-05d0564bb571 // indirect
 	github.com/gin-contrib/sse v0.1.0 // indirect
 	github.com/go-base-lib/transport-stream v0.0.0-20220817085119-03136fb70ffd // indirect
 	github.com/go-playground/locales v0.14.0 // indirect

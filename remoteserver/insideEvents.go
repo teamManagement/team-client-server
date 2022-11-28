@@ -1,6 +1,8 @@
 package remoteserver
 
-type InsideEventHandlerFn = func(userInfo *UserInfo) error
+import "team-client-server/vos"
+
+type InsideEventHandlerFn = func(userInfo *vos.UserInfo) error
 
 type InsideEventName string
 
@@ -16,7 +18,7 @@ func RegistryInsideEvent(eventName InsideEventName, fn InsideEventHandlerFn) {
 	eventMaps[eventName] = fn
 }
 
-func InvokeInsideEvent(eventName InsideEventName, userInfo *UserInfo) error {
+func InvokeInsideEvent(eventName InsideEventName, userInfo *vos.UserInfo) error {
 	fn, ok := eventMaps[eventName]
 	if !ok {
 		return nil

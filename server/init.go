@@ -7,8 +7,11 @@ import (
 	"github.com/go-base-lib/logs"
 	"github.com/sirupsen/logrus"
 	ginmiddleware "github.com/teamManagement/gin-middleware"
-	"team-client-server/cache"
 	"team-client-server/db"
+	"team-client-server/remoteserver"
+	"team-client-server/sdk"
+	cache2 "team-client-server/sdk/cache"
+	"team-client-server/services"
 	"team-client-server/tools"
 	"team-client-server/updater"
 	"team-client-server/website"
@@ -25,7 +28,7 @@ func Run() {
 	ginmiddleware.UseNotFoundHandle(engine)
 	InitIcons(engine)
 	website.InitAppWebSite(engine)
-	cache.InitHttpDownloadFileHand(engine)
+	cache2.InitHttpDownloadFileHand(engine)
 	// cache
 	engine.Any("/c/forward/:name/*path", proxyCacheForward)
 
@@ -36,8 +39,10 @@ func Run() {
 	engine.Use(ginmiddleware.UseRecover2HttpResult())
 	initWs(engine)
 	initLocalService(engine)
-	cache.InitCache(engine)
+	sdk.InitLocalWebSdk(engine)
 	updater.InitUpdaterHttpRestful(engine)
+	remoteserver.InitLocalService(engine)
+	services.InitLocalWebServices(engine)
 
 	keyPair, err := tls.X509KeyPair(tools.ClientCertBytes, tools.ClientKeyBytes)
 	if err != nil {

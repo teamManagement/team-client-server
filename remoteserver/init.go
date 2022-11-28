@@ -68,7 +68,7 @@ func GetTcpTransfer() <-chan *TcpTransferInfo {
 }
 
 var (
-	nowUserInfo *UserInfo
+	nowUserInfo *vos.UserInfo
 	rawToken    [][]byte
 	loginOk     = false
 	connCloseCh chan struct{}
@@ -80,6 +80,7 @@ var (
 
 const (
 	LocalWebServerAddress = "https://apps.byzk.cn:443"
+	LocalWSServerAddress  = "wss://apps.byzk.cn:443"
 
 	ServerAddress = "apps.byzk.cn:80"
 
@@ -130,6 +131,11 @@ func Login(username, password string) (err error) {
 		defer lock.Unlock()
 	}
 	Logout()
+
+	decodePasswd, err := base64.StdEncoding.DecodeString(password)
+	if err != nil {
+		return fmt.Errorf("密码格式解析失败: %s", err.Error())
+	}
 
 	dial, err := tls.Dial("tcp", ServerAddress, tools.GenerateTLSConfig())
 	if err != nil {
@@ -191,7 +197,7 @@ func Login(username, password string) (err error) {
 
 	nowUserInfo.Token = jwtTokenStr
 
-	cachePasswd := nowUserInfo.Id + "_teamwork_cache_" + password
+	cachePasswd := nowUserInfo.Id + "_teamwork_cache_" + string(decodePasswd)
 	cachePasswdHash, err := coderutils.Hash(sha1.New(), []byte(cachePasswd))
 	if err != nil {
 		return fmt.Errorf("用户缓存帐号计算失败: %s", err.Error())
@@ -215,6 +221,12 @@ func Login(username, password string) (err error) {
 
 	_ = sqlite.Db().Table("app-" + nowUserInfo.Id + "-0").AutoMigrate(&vos.Setting{})
 
+	_ = FlushAllCache()
+
+	if err = startChatWs(); err != nil {
+		return err
+	}
+
 	connCloseCh = make(chan struct{}, 1)
 	go userConnHandler(connWrapper, dial)
 
@@ -233,6 +245,7 @@ func userConnHandler(connWrapper *conn.Wrapper, dial net.Conn) {
 
 	isClose := false
 	defer func() {
+		stopWsChat()
 		operationCh <- 1
 		close(cmdCh)
 		close(operationCh)
@@ -290,11 +303,16 @@ func userConnHandler(connWrapper *conn.Wrapper, dial net.Conn) {
 			isClose = true
 			return
 		case code := <-cmdCh:
+			data := <-dataCh
+			err := <-errCh
 			logs.Debugf("调用代码")
-			if err := serverCmdHandler(code, cmdCh, dataCh); err != nil {
+			if err = serverCmdHandler(err, code, data, readDataFn, writeDataFn); err != nil {
 				return
 			}
 		case err := <-errCh:
+			if err == nil {
+				continue
+			}
 			logs.Debugf("TCP通道监听返回错误: %s， 将要关闭TCP通道", err.Error())
 			return
 		}
@@ -358,7 +376,11 @@ func tokenDelay(readDataFn func() (goextension.Bytes, error), writeDataFn func(d
 	return nil
 }
 
-func serverCmdHandler(cmdCode byte, cmdCh chan byte, dataCh chan goextension.Bytes) error {
+func serverCmdHandler(err error, cmdCode byte, data goextension.Bytes, readDataFn func() (goextension.Bytes, error), writeDataFn func(data []byte) error) error {
+	switch cmdCode {
+	case remoteModelCodeUpdateCache:
+		_ = FlushAllCache()
+	}
 	return nil
 }
 
@@ -421,6 +443,7 @@ func Logout() {
 	if lock.TryLock() {
 		defer lock.Unlock()
 	}
+	stopWsChat()
 	chanLock.Lock()
 	defer chanLock.Unlock()
 	loginOk = false
@@ -452,9 +475,10 @@ func Token() string {
 	return user.Token
 }
 
-func NowUser() (*UserInfo, error) {
-	lock.Lock()
-	defer lock.Unlock()
+func NowUser() (*vos.UserInfo, error) {
+	if lock.TryLock() {
+		defer lock.Unlock()
+	}
 
 	if nowUserInfo == nil {
 		return nil, errors.New("用户未登录")

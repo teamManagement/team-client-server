@@ -22,7 +22,7 @@ func initAppService(engine *gin.RouterGroup) {
 		POST("/debug/install", ginmiddleware.WrapperResponseHandle(appDebugInstall)).
 		POST("/debug/uninstall/:appId", ginmiddleware.WrapperResponseHandle(appDebugUninstall))
 
-	remoteserver.RegistryInsideEvent(remoteserver.InsideEventNameFlushAppList, func(userInfo *remoteserver.UserInfo) error {
+	remoteserver.RegistryInsideEvent(remoteserver.InsideEventNameFlushAppList, func(userInfo *vos.UserInfo) error {
 		_, err := appForceFlushDesktop(userInfo)
 		return err
 	})
@@ -82,7 +82,7 @@ var (
 		addAppInfo.Debugging = true
 		addAppInfo.Url = addAppInfo.RemoteSiteUrl
 		addAppInfo.UserId = nowUser.Id
-		addAppInfo.Status = vos.ApplicationNormal
+		addAppInfo.Status = vos.ApplicationStatusNormal
 
 		return sqlite.Db().Transaction(func(tx *gorm.DB) error {
 			return appHandlerInstallInfo(tx, addAppInfo, nowUser.Id)
@@ -161,9 +161,26 @@ var (
 			return err
 		}
 		appList := make([]*vos.Application, 0)
-		if err := sqlite.Db().Where("status=? and user_id=?", vos.ApplicationNormal, nowUser.Id).Find(&appList).Error; err != nil && err != gorm.ErrRecordNotFound {
+		if err := sqlite.Db().Where("status=? and user_id=?", vos.ApplicationStatusNormal, nowUser.Id).Find(&appList).Error; err != nil && err != gorm.ErrRecordNotFound {
 			return fmt.Errorf("查询应用列表失败: %s", err.Error())
 		}
+
+		for i := range appList {
+			appInfo := appList[i]
+			if !appInfo.HaveRemoteDb && !appInfo.Debugging {
+				_ = sqlite.Db().Transaction(func(tx *gorm.DB) error {
+					if err = tx.Model(&vos.Application{}).Where("id=? and user_id=? and not debugging", appInfo.Id, appInfo.UserId).Update("have_remote_db", true).Error; err != nil {
+						return err
+					}
+					if err := remoteserver.RequestWebService("/app/db/create/" + appInfo.Id); err != nil {
+						return err
+					}
+					return nil
+				})
+
+			}
+		}
+
 		return appList
 	}
 
@@ -173,7 +190,7 @@ var (
 	}
 )
 
-func appForceFlushDesktop(nowUser *remoteserver.UserInfo) ([]*vos.Application, error) {
+func appForceFlushDesktop(nowUser *vos.UserInfo) ([]*vos.Application, error) {
 	var appList []*vos.Application
 	if err := remoteserver.RequestWebServiceWithResponse("/app/list", &appList); err != nil {
 		return nil, fmt.Errorf("获取应用列表失败: %s", err.Error())

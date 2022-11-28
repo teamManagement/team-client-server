@@ -1,4 +1,4 @@
-package remoteserver
+package vos
 
 type UserStatus uint8
 
@@ -177,9 +177,11 @@ type UserInfo struct {
 	// Age 年龄
 	Age int `json:"age,omitempty" gorm:"-"`
 	// Token token字符串
-	Token string `json:"token,omitempty"`
+	Token string `json:"-"`
 	// RefreshToken 刷新Token
 	RefreshToken string `json:"-"`
 	// TokenExpire token有效期
 	TokenExpire int64 `json:"-"`
+	// IsAppStoreManager 是否为应用商店的管理员
+	IsAppStoreManager bool `json:"isAppStoreManager,omitempty" gorm:"-"`
 }

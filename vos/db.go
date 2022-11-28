@@ -9,6 +9,7 @@ import (
 	"github.com/go-base-lib/coderutils"
 	"github.com/go-base-lib/goextension"
 	"team-client-server/tools"
+	"time"
 )
 
 const encryptValCipherKeyLen = 512
@@ -91,8 +92,8 @@ const (
 	ApplicationStatusTakeReject
 	// ApplicationStatusRectification 整改中
 	ApplicationStatusRectification
-	// ApplicationNormal 正常
-	ApplicationNormal
+	// ApplicationStatusNormal 正常
+	ApplicationStatusNormal
 )
 
 type IconType uint
@@ -152,6 +153,8 @@ type Application struct {
 	Debugging bool `json:"debugging,omitempty"`
 	// UserId 用户Id
 	UserId string `json:"userId,omitempty" gorm:"primaryKey"`
+	//HaveRemoteDb 是否具有远程db
+	HaveRemoteDb bool `json:"-"`
 }
 
 type ProxyHttpServerInfo struct {
@@ -171,4 +174,72 @@ type ProxyHttpResponseCache struct {
 	ContentHash        []byte
 	ResponseHeader     string
 	ResponseStatusCode int
+}
+
+// ChatGroupInfo 聊天群信息
+type ChatGroupInfo struct {
+	// Id 聊天群ID
+	Id string `json:"id,omitempty" gorm:"primaryKey"`
+	// Name 名称
+	Name string `json:"name,omitempty"`
+	// Icon 图标url
+	Icon string `json:"icon,omitempty"`
+	// Desc
+	Desc string `json:"desc,omitempty" gorm:"type:longtext"`
+	// CreateUserId 创建者ID
+	CreateUserId string `json:"createUserId,omitempty"`
+	// MainManagerUserId 群主ID
+	MainManagerUserId string `json:"mainManagerUserId,omitempty"`
+	// CreateAt 创建时间
+	CreatedAt time.Time `json:"createdAt,omitempty"`
+	// UpdateAt 更新时间
+	UpdatedAt time.Time `json:"updatedAt,omitempty"`
+}
+
+// ChatType 聊天类型
+type ChatType uint8
+
+const (
+	ChatUnknown ChatType = iota
+	// ChatTypeUser 用户<->用户
+	ChatTypeUser
+	// ChatTypeGroup 用户<->群组
+	ChatTypeGroup
+	// ChatTypeApp 用户<->App
+	ChatTypeApp
+)
+
+// ChatMsgType 聊天消息类新
+type ChatMsgType uint8
+
+const (
+	// ChatMsgTypeText 文本聊天消息
+	ChatMsgTypeText ChatMsgType = iota + 1
+	// ChatMsgTypeFile 文件消息
+	ChatMsgTypeFile
+	// ChatMsgTypeImg 图片消息
+	ChatMsgTypeImg
+)
+
+// UserChatMsg 用户聊天信息
+type UserChatMsg struct {
+	Id string `json:"id,omitempty" gorm:"primaryKey"`
+	// TargetId 目标ID
+	TargetId string `json:"targetId,omitempty"`
+	// TargetInfo 目标信息
+	TargetInfo any `json:"targetInfo,omitempty" gorm:"-"`
+	// SourceId 源Id
+	SourceId string `json:"sourceUserId,omitempty"`
+	// ContextText 文本消息内容
+	ContentText string `json:"contentText,omitempty" gorm:"type:longtext"`
+	// ContentFilePath 文件内容的Id
+	ContentFileId string `json:"contentFileId,omitempty"`
+	// ChatType 聊天类别
+	ChatType ChatType `json:"chatType,omitempty"`
+	// MsgType 消息类别
+	MsgType ChatMsgType `json:"msgType,omitempty"`
+	// CreateAt 创建时间
+	CreatedAt time.Time `json:"createdAt,omitempty"`
+	// UpdateAt 更新时间
+	UpdatedAt time.Time `json:"updatedAt,omitempty"`
 }
