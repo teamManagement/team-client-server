@@ -25,17 +25,18 @@ const AppDetail: FC<IAppDetailProps> = (props) => {
   const [showOne, setShowOne] = useState<boolean>(true)
   const [ifInstall, setIfInstall] = useState<any[]>([])
   const [loading, setLoading] = useState<boolean>(false)
+  const [mDetail, setMDetail] = useState<any>()
 
 
   const getAppList = useCallback(async () => {
     try {
       if (!props.selectedId) { return }
       const list = await getAppTypeList(props.selectedId)
+      console.log(list);
+
       if (list?.appList.length === 0) { return }
       setIfInstall(list?.appInstallationIdList)
       setList(list?.appList)
-      setIfDetail(false)
-      fnsRef.current.close()
     } catch (e: any) {
       message.error(e.message)
     }
@@ -45,10 +46,10 @@ const AppDetail: FC<IAppDetailProps> = (props) => {
 
   const divList = list?.map((m, i) => {
     const stallId = ifInstall?.filter(item => item === m.id)
-
     return <div className="small-div">
       <div className="list-div" onClick={() => {
         fnsRef.current.show(m)
+        setMDetail(m)
         setIfDetail(true)
       }}>
         <div className="left"><Image width={40} preview={false} src={m.icon} /></div>
@@ -116,8 +117,12 @@ const AppDetail: FC<IAppDetailProps> = (props) => {
         setIfDetail(false)
         fnsRef.current.close()
         // }}><IconPro style={{ fontSize: 26 }} type='icon-fanhui' /></div>}
-      }}><span style={{ fontSize: 26,marginTop:-10 }}>←</span></div>}
-      <Detail fns={fnsRef} finished={() => getAppList()} instalList={ifInstall} />
+      }}><span style={{ fontSize: 26, marginTop: -10 }}>←</span></div>}
+      <Detail fns={fnsRef} finished={() => {
+        getAppList()
+        setIfDetail(true)
+        fnsRef.current.show(mDetail && mDetail)
+      }} instalList={ifInstall} />
     </>
   )
 }

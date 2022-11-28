@@ -13,13 +13,15 @@ const AddTypes: React.FC<ITypeProps> = (props) => {
 
   const [visible, setVisible] = useState<boolean>(false)
   const formRef = useRef<FormInstance>()
+  const [formValue,setFormValue] = useState<any>()
 
   useEffect(() => {
     props.fns.current = {
       show(info: any) {
         setVisible(true)
         console.log(info);
-        formRef.current?.setFieldsValue(info)
+        setFormValue(info)
+        // formRef.current?.setFieldsValue({...info})
       },
       close() { setVisible(false) }
     }
@@ -35,7 +37,7 @@ const AddTypes: React.FC<ITypeProps> = (props) => {
         onCancel={() => setVisible(false)}
         destroyOnClose
       >
-        <ProForm formRef={formRef} layout='horizontal'>
+        <ProForm formRef={formRef} layout='horizontal' initialValues={formValue}>
           <ProFormText label='名称' name='name' placeholder='请输入类别名称' />
           <Form.Item label='图标' name='icon'>
             <FileUpload valueMode='base64' showMode='picture' accept=".png" placeHolder='请选择png/jpeg文件' maxSize={1024 * 1024 * 1024} />

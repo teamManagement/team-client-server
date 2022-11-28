@@ -26,7 +26,6 @@ const Home: React.FC = () => {
   }, [])
 
 
-
   useEffect(() => {
     getFileList()
   }, [getFileList])
