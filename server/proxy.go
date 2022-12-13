@@ -180,6 +180,7 @@ var (
 		header := ctx.Request.Header
 		if token != "" {
 			header.Set("_t", token)
+			header.Set("_a", remoteserver.LoginIp())
 		}
 		header.Set("User-Agent", "teamManageLocal")
 		ctx.Request.URL.Path = ctx.Request.URL.Path[6:]
@@ -246,6 +247,7 @@ var (
 		token = remoteserver.Token()
 		if token != "" {
 			ctx.Request.Header.Set("_t", token)
+			ctx.Request.Header.Set("_a", remoteserver.LoginIp())
 		}
 
 		ctx.Request.URL.Path = fmt.Sprintf("/proxy/%s/%s", proxyName, proxyTargetPath)

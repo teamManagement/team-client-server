@@ -184,4 +184,6 @@ type UserInfo struct {
 	TokenExpire int64 `json:"-"`
 	// IsAppStoreManager 是否为应用商店的管理员
 	IsAppStoreManager bool `json:"isAppStoreManager,omitempty" gorm:"-"`
+	// LoginIp 用户登录的IP
+	LoginIp string `json:"loginIp,omitempty" gorm:"-"`
 }

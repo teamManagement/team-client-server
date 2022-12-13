@@ -20,7 +20,8 @@ func initAppService(engine *gin.RouterGroup) {
 		POST("/install/:appId", ginmiddleware.WrapperResponseHandle(appInstall)).
 		POST("/uninstall/:appId", ginmiddleware.WrapperResponseHandle(appUninstall)).
 		POST("/debug/install", ginmiddleware.WrapperResponseHandle(appDebugInstall)).
-		POST("/debug/uninstall/:appId", ginmiddleware.WrapperResponseHandle(appDebugUninstall))
+		POST("/debug/uninstall/:appId", ginmiddleware.WrapperResponseHandle(appDebugUninstall)).
+		POST("/try/create/db/again/:appId", ginmiddleware.WrapperResponseHandle(appTryCreateRemoteDbAgain))
 
 	remoteserver.RegistryInsideEvent(remoteserver.InsideEventNameFlushAppList, func(userInfo *vos.UserInfo) error {
 		_, err := appForceFlushDesktop(userInfo)
@@ -187,6 +188,33 @@ var (
 	// appInfoGetById 应用信息获取通过ID
 	appInfoGetById ginmiddleware.ServiceFun = func(ctx *gin.Context) interface{} {
 		return nil
+	}
+
+	appTryCreateRemoteDbAgain ginmiddleware.ServiceFun = func(ctx *gin.Context) interface{} {
+		nowUser, err := remoteserver.NowUser()
+		if err != nil {
+			return err
+		}
+
+		appId := ctx.Param("appId")
+		return sqlite.Db().Transaction(func(tx *gorm.DB) error {
+			appModalWhere := tx.Model(&vos.Application{}).Where("id=? and user_id=? and status='4' and not debugging", appId, nowUser.Id)
+
+			var count int64
+			if err := appModalWhere.Count(&count).Error; err != nil {
+				return fmt.Errorf("查询应用信息失败: %s", err.Error())
+			}
+
+			if err := remoteserver.RequestWebService("/app/db/create/" + appId); err != nil {
+				return err
+			}
+
+			if err := appModalWhere.UpdateColumn("have_remote_db", true).Error; err != nil {
+				return fmt.Errorf("更新应用状态失败: %s", err.Error())
+			}
+
+			return nil
+		})
 	}
 )
 

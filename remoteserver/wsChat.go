@@ -1,9 +1,12 @@
 package remoteserver
 
 import (
+	"crypto/tls"
 	"errors"
 	"fmt"
+	"github.com/byzk-worker/go-db-utils/sqlite"
 	"github.com/gorilla/websocket"
+	"gorm.io/gorm"
 	"io"
 	"net/http"
 	"sync"
@@ -22,6 +25,8 @@ const (
 )
 
 type ChatMsgQueryParam struct {
+	// TimeId 查询该Id之后的所有聊天结果
+	TimeId string `json:"timeId,omitempty"`
 }
 
 type ChatMsgWrapper struct {
@@ -61,9 +66,14 @@ func startChatWs() (err error) {
 
 	wsChatResponseChan = make(chan *ChatMsgWrapper)
 
-	dialer := &websocket.Dialer{}
+	dialer := &websocket.Dialer{
+		TLSClientConfig: &tls.Config{
+			InsecureSkipVerify: true,
+		},
+	}
 	wsChatConn, wsChatHttpResponse, err = dialer.Dial(LocalWSServerAddress+"/ws/chat", http.Header{
 		"_t":         []string{Token()},
+		"_a":         []string{LoginIp()},
 		"User-Agent": []string{"teamManageLocal"},
 	})
 
@@ -72,11 +82,14 @@ func startChatWs() (err error) {
 	}
 
 	go chatWsLoop()
-	return nil
+
+	return UserChatFlushLocalByRemoteServer()
+
 }
 
 func chatWsLoop() {
 	defer stopWsChat()
+	defer func() { recover() }()
 
 	for {
 
@@ -96,20 +109,55 @@ func chatWsLoop() {
 	}
 }
 
-func UserChatPut(chatData *vos.UserChatMsg) (*vos.UserChatMsg, error) {
+func UserChatFlushLocalByRemoteServer() (err error) {
+	var (
+		chatMsgList   []*vos.UserChatMsg
+		chatEndTimeId string
+	)
+
+	chatMsgGlobalTimeIdSetting := &vos.Setting{
+		Name: "chat_msg_global_time_id",
+	}
+	if err = sqlite.Db().Model(&vos.Setting{}).Where(&chatMsgGlobalTimeIdSetting).Find(&chatMsgGlobalTimeIdSetting).Error; err != nil || chatMsgGlobalTimeIdSetting.Value == "" {
+		chatMsgList, chatEndTimeId, err = UserChatQueryAll()
+	} else {
+		chatMsgList, chatEndTimeId, err = UserChatQueryTimeIdAfter(string(chatMsgGlobalTimeIdSetting.Value))
+	}
+
+	if err != nil {
+		return err
+	}
+
+	return sqlite.Db().Transaction(func(tx *gorm.DB) error {
+		if chatEndTimeId != "" {
+			chatMsgGlobalTimeIdSetting.Value = vos.EncryptValue(chatEndTimeId)
+			if err = tx.Save(&chatMsgGlobalTimeIdSetting).Error; err != nil {
+				return fmt.Errorf("更新消息标识失败: %s", err.Error())
+			}
+		}
+
+		for i := range chatMsgList {
+			chatMsg := chatMsgList[i]
+			if chatMsg.ClientUniqueId == "" {
+				continue
+			}
+
+			if err = tx.Save(&chatMsg).Error; err != nil {
+				return fmt.Errorf("更新本地消息失败: %s", err.Error())
+			}
+		}
+
+		return nil
+	})
+}
+
+func userChatWriteWrapperDataAndResponse(wrapper *ChatMsgWrapper) (*ChatMsgWrapper, error) {
 	if wsChatConn == nil {
 		return nil, errors.New("用户未登录")
 	}
 
-	currentUser, err := NowUser()
-	if err != nil {
-		return nil, err
-	}
-
-	chatData.SourceId = currentUser.Id
-
-	if err = wsChatConn.WriteJSON(chatData); err != nil {
-		return nil, fmt.Errorf("消息发送失败: %s", err.Error())
+	if err := wsChatConn.WriteJSON(wrapper); err != nil {
+		return nil, fmt.Errorf("消息查询失败: %s", err.Error())
 	}
 
 	res, isOpen := <-wsChatResponseChan
@@ -117,8 +165,45 @@ func UserChatPut(chatData *vos.UserChatMsg) (*vos.UserChatMsg, error) {
 		return nil, errors.New("用户登录凭证异常")
 	}
 
-	if res.Error {
-		return nil, errors.New(res.ErrMsg)
+	return res, nil
+}
+
+func UserChatQueryAll() ([]*vos.UserChatMsg, string, error) {
+	res, err := userChatWriteWrapperDataAndResponse(&ChatMsgWrapper{
+		Cmd: ChatMsgCmdGetList,
+	})
+	if err != nil {
+		return nil, "", err
+	}
+
+	return res.ChatListData, res.QueryParam.TimeId, err
+}
+
+func UserChatQueryTimeIdAfter(timeId string) ([]*vos.UserChatMsg, string, error) {
+
+	res, err := userChatWriteWrapperDataAndResponse(&ChatMsgWrapper{
+		Cmd: ChatMsgCmdGetList,
+		QueryParam: ChatMsgQueryParam{
+			TimeId: timeId,
+		},
+	})
+
+	if err != nil {
+		return nil, "", err
+	}
+
+	return res.ChatListData, res.QueryParam.TimeId, nil
+}
+
+func UserChatPut(chatData *vos.UserChatMsg) (*vos.UserChatMsg, error) {
+
+	res, err := userChatWriteWrapperDataAndResponse(&ChatMsgWrapper{
+		Cmd:      ChatMsgCmdPut,
+		ChatData: chatData,
+	})
+
+	if err != nil {
+		return nil, err
 	}
 
 	return res.ChatData, nil

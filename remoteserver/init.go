@@ -37,6 +37,10 @@ const (
 	TcpTransferCmdCodeRestoreServerConnErr
 	// TcpTransferCmdCodeRestoreServerConnOK 远程服务恢复成功
 	TcpTransferCmdCodeRestoreServerConnOK
+	// TcpTransferCmdCodeOtherUserStatusChange 其他用户状态变更
+	TcpTransferCmdCodeOtherUserStatusChange
+	// TcpTransferCmCodeOtherLogin 用户在他处登录
+	TcpTransferCmCodeOtherLogin
 )
 
 // TcpTransferInfo tcp转移信息, 用于tcp消息转换为ws消息
@@ -65,6 +69,13 @@ func StopTcpTransfer() {
 // GetTcpTransfer 获取tcp信息转移数据
 func GetTcpTransfer() <-chan *TcpTransferInfo {
 	return tcpTransferChan
+}
+
+func sendTcpTransfer(info *TcpTransferInfo) {
+	defer func() { recover() }()
+	if tcpTransferChan != nil {
+		tcpTransferChan <- info
+	}
 }
 
 var (
@@ -119,7 +130,7 @@ func AutoLogin() (res bool) {
 		return
 	}
 
-	if err = Login(string(username), string(password)); err != nil {
+	if err = Login(base64.StdEncoding.EncodeToString([]byte(username)), string(password)); err != nil {
 		return
 	}
 
@@ -137,7 +148,29 @@ func Login(username, password string) (err error) {
 		return fmt.Errorf("密码格式解析失败: %s", err.Error())
 	}
 
-	dial, err := tls.Dial("tcp", ServerAddress, tools.GenerateTLSConfig())
+	localInter, ok := tools.TelnetHostRangeNetInterfaces(ServerAddress)
+	if !ok {
+		return fmt.Errorf("未识别到可用的网卡信息")
+	}
+
+	localInterIpStr := localInter.String()
+
+	localAddr, err := net.ResolveTCPAddr("tcp", localInterIpStr+":0")
+	if err != nil {
+		return errors.New("获取本机网卡IP失败")
+	}
+
+	usernameOriginBytes, err := base64.StdEncoding.DecodeString(username)
+	if err != nil {
+		return errors.New("解析用户名格式失败")
+	}
+	username = base64.StdEncoding.EncodeToString([]byte(localInterIpStr + "@" + string(usernameOriginBytes)))
+
+	dialer := &net.Dialer{
+		LocalAddr: localAddr,
+	}
+
+	dial, err := tls.DialWithDialer(dialer, "tcp", ServerAddress, tools.GenerateTLSConfig())
 	if err != nil {
 		return fmt.Errorf("连接远程服务失败: %s", err.Error())
 	}
@@ -214,7 +247,7 @@ func Login(username, password string) (err error) {
 
 	sqlite.Db().Save(&vos.Setting{
 		Name:  autoLoginSettingKey,
-		Value: vos.EncryptValue(base64.StdEncoding.EncodeToString([]byte(username)) + "." + base64.StdEncoding.EncodeToString([]byte(password))),
+		Value: vos.EncryptValue(base64.StdEncoding.EncodeToString([]byte(nowUserInfo.Username)) + "." + base64.StdEncoding.EncodeToString([]byte(password))),
 	})
 
 	loginOk = true
@@ -380,6 +413,16 @@ func serverCmdHandler(err error, cmdCode byte, data goextension.Bytes, readDataF
 	switch cmdCode {
 	case remoteModelCodeUpdateCache:
 		_ = FlushAllCache()
+	case remoteModelCodeOtherUserStatusChange:
+		sendTcpTransfer(&TcpTransferInfo{
+			CmdCode: TcpTransferCmdCodeOtherUserStatusChange,
+			Data:    data,
+		})
+	case remoteModelCodeOtherLoginNotify:
+		sendTcpTransfer(&TcpTransferInfo{
+			CmdCode: TcpTransferCmCodeOtherLogin,
+			Data:    data,
+		})
 	}
 	return nil
 }
@@ -473,6 +516,14 @@ func Token() string {
 	}
 
 	return user.Token
+}
+
+func LoginIp() string {
+	user, err := NowUser()
+	if err != nil {
+		return ""
+	}
+	return user.LoginIp
 }
 
 func NowUser() (*vos.UserInfo, error) {

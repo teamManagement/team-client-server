@@ -18,6 +18,7 @@ func RequestWebServiceWithData(url string, data any, res any) error {
 		JsonData: data,
 		Header: map[string]string{
 			"_t":         Token(),
+			"_a":         LoginIp(),
 			"User-Agent": "teamManageLocal",
 		},
 	}

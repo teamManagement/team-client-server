@@ -223,17 +223,19 @@ const (
 
 // UserChatMsg 用户聊天信息
 type UserChatMsg struct {
-	Id string `json:"id,omitempty" gorm:"primaryKey"`
+	Id string `json:"id,omitempty"`
 	// TargetId 目标ID
 	TargetId string `json:"targetId,omitempty"`
 	// TargetInfo 目标信息
 	TargetInfo any `json:"targetInfo,omitempty" gorm:"-"`
 	// SourceId 源Id
 	SourceId string `json:"sourceUserId,omitempty"`
-	// ContextText 文本消息内容
-	ContentText string `json:"contentText,omitempty" gorm:"type:longtext"`
-	// ContentFilePath 文件内容的Id
-	ContentFileId string `json:"contentFileId,omitempty"`
+	// SourceInfo 源信息
+	SourceInfo any `json:"sourceInfo,omitempty" gorm:"-"`
+	// Content 内容
+	Content string `json:"content,omitempty" gorm:"type:longtext"`
+	// FileIcon 当消息内容为文件类型时, 存放图标
+	FileIcon string `json:"fileIcon,omitempty"`
 	// ChatType 聊天类别
 	ChatType ChatType `json:"chatType,omitempty"`
 	// MsgType 消息类别
@@ -242,4 +244,10 @@ type UserChatMsg struct {
 	CreatedAt time.Time `json:"createdAt,omitempty"`
 	// UpdateAt 更新时间
 	UpdatedAt time.Time `json:"updatedAt,omitempty"`
+	// ClientUniqueId 客户端唯一ID
+	ClientUniqueId string `json:"clientUniqueId,omitempty" gorm:"primaryKey"`
+	// Status 当前状态
+	Status string `json:"status,omitempty"`
+	// ErrMsg 错误信息
+	ErrMsg string `json:"errMsg,omitempty"`
 }

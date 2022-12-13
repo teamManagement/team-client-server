@@ -114,6 +114,7 @@ var (
 			}
 
 			tusClient.Header.Set("_t", t)
+			tusClient.Header.Set("_a", LoginIp())
 			tusClient.Header.Set("User-Agent", "teamManageLocal")
 
 			upload, err := tus.NewUploadFromFile(f)

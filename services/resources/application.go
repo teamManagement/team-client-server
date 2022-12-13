@@ -22,6 +22,10 @@ var (
 			return err
 		}
 
+		if nowUser.Id == "0" {
+			return "[]"
+		}
+
 		var applicationList []vos.Application
 		if err := sqlite.Db().Model(&vos.Application{}).Where("user_id=? and not debugging and status=?", nowUser.Id, vos.ApplicationStatusNormal).Find(&applicationList).Error; err != nil && err != gorm.ErrRecordNotFound {
 			return fmt.Errorf("查询应用列表失败: %s", err.Error())
