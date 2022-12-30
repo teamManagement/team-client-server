@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/go-base-lib/coderutils"
 	"github.com/go-base-lib/goextension"
+	"team-client-server/queue"
 	"team-client-server/tools"
 	"time"
 )
@@ -127,6 +128,10 @@ type Application struct {
 	RemoteSiteUrl string `json:"remoteSiteUrl,omitempty" gorm:"type:longtext"`
 	// Url 访问url
 	Url string `json:"url,omitempty" gorm:"type:longtext"`
+	// BackgroundFileDir 背景文件路径
+	BackgroundFileDir string `json:"backgroundFileDir,omitempty"`
+	// BackgroundFileHash 背景文件的hash, 格式为json格式的字符串, {"文件名": "hash hex"}
+	BackgroundFileHash string `json:"-"`
 	// LocalFileHash 本地文件HASH
 	LocalFileHash []byte `json:"localFileHash,omitempty"`
 	// Icon 图标地址
@@ -229,7 +234,7 @@ type UserChatMsg struct {
 	// TargetInfo 目标信息
 	TargetInfo any `json:"targetInfo,omitempty" gorm:"-"`
 	// SourceId 源Id
-	SourceId string `json:"sourceUserId,omitempty"`
+	SourceId string `json:"sourceId,omitempty"`
 	// SourceInfo 源信息
 	SourceInfo any `json:"sourceInfo,omitempty" gorm:"-"`
 	// Content 内容
@@ -250,4 +255,26 @@ type UserChatMsg struct {
 	Status string `json:"status,omitempty"`
 	// ErrMsg 错误信息
 	ErrMsg string `json:"errMsg,omitempty"`
+}
+
+type QueueType uint
+
+const (
+	QueueTypeSend QueueType = iota
+	QueueTypeReceive
+)
+
+// QueueChannelMsgInfo 通道消息签收信息
+type QueueChannelMsgInfo struct {
+	Id string `json:"id,omitempty" gorm:"primaryKey"`
+	// QueueMsgId 队列消息
+	QueueMsgId  string            `json:"-"`
+	Content     string            `json:"content,omitempty"`
+	Ack         bool              `json:"ack,omitempty"`
+	AckTime     int64             `json:"ackTime,omitempty"`
+	SendTime    int64             `json:"sendTime,omitempty"`
+	ReceiveTime int64             `json:"receiveTime,omitempty"`
+	QueueType   QueueType         `json:"-" gorm:"primaryKey"`
+	Type        queue.MessageType `json:"type,omitempty"`
+	AppId       string            `json:"appId,omitempty"`
 }

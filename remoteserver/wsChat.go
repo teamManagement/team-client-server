@@ -2,6 +2,7 @@ package remoteserver
 
 import (
 	"crypto/tls"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/byzk-worker/go-db-utils/sqlite"
@@ -101,8 +102,36 @@ func chatWsLoop() {
 			continue
 		}
 
-		if chatMsgWrapper.Cmd == ChatMsgCmdResponse {
+		switch chatMsgWrapper.Cmd {
+		case ChatMsgCmdResponse:
 			wsChatResponseChan <- chatMsgWrapper
+		case ChatMsgCmdPut:
+			chatData := chatMsgWrapper.ChatData
+			if chatData.ClientUniqueId == "" {
+				continue
+			}
+
+			var count int64
+			if err := sqlite.Db().Model(&vos.UserChatMsg{}).Where("client_unique_id=?", chatData.ClientUniqueId).Count(&count).Error; err != nil {
+				continue
+			}
+
+			if count > 0 {
+				if err := sqlite.Db().Model(&vos.UserChatMsg{}).Where("client_unique_id=?", chatData.ClientUniqueId).UpdateColumns(&chatData).Error; err != nil {
+					continue
+				}
+			} else {
+				if err := sqlite.Db().Model(&vos.UserChatMsg{}).Create(&chatData).Error; err != nil {
+					continue
+				}
+			}
+
+			marshal, _ := json.Marshal(chatData)
+
+			sendTcpTransfer(&TcpTransferInfo{
+				CmdCode: TcpTransferCmdCodeChatMsgChange,
+				Data:    marshal,
+			})
 		}
 
 		continue

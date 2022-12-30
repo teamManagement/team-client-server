@@ -264,7 +264,12 @@ func appHandlerUninstallInfo(db *gorm.DB, userId, appId string) error {
 }
 
 // appHandlerInstallInfo 处理应用的安装信息
-func appHandlerInstallInfo(db *gorm.DB, appInfo *vos.Application, userId string) error {
+func appHandlerInstallInfo(db *gorm.DB, appInfo *vos.Application, userId string) (err error) {
+	//defer func() {
+	//	if err != nil {
+	//		_ = appHandlerUninstallInfo(db, userId, appInfo.Id)
+	//	}
+	//}()
 	if appInfo == nil || appInfo.Id == "" {
 		return errors.New("缺失应用信息或应用ID")
 	}
@@ -292,6 +297,18 @@ func appHandlerInstallInfo(db *gorm.DB, appInfo *vos.Application, userId string)
 	if err := appModel.Where("id=? and user_id=?", appInfo.Id, userId).Save(appInfo).Error; err != nil {
 		return fmt.Errorf("应用信息保存失败: %s", err.Error())
 	}
+
+	//if len(appInfo.LocalFileHash) > 0 {
+	//	req, err := remoteserver.RequestWebServiceToRawReq("/app/download/file/"+appInfo.Id, nil)
+	//	if err != nil {
+	//		return fmt.Errorf("请求程序文件失败: %w", err)
+	//	}
+	//
+	//	req.ResponseWithHandler(func(res *http.Response) error {
+	//
+	//	})
+	//
+	//}
 
 	return nil
 }

@@ -45,6 +45,7 @@ func initDataTable() {
 			&vos.ProxyHttpResponseCache{},
 			&vos.UserChatMsg{},
 			&vos.ChatGroupInfo{},
+			&vos.QueueChannelMsgInfo{},
 			&vos.Application{}); err != nil {
 		logs.Fatalf("初始化数据库信息失败: %s")
 		os.Exit(10)

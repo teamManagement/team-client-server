@@ -13,11 +13,13 @@ import (
 	"github.com/go-base-lib/goextension"
 	"github.com/go-base-lib/logs"
 	"github.com/golang-jwt/jwt/v4"
+	"github.com/nsqio/go-nsq"
 	"github.com/teamManagement/common/conn"
 	"net"
 	"strconv"
 	"strings"
 	"sync"
+	"team-client-server/queue"
 	"team-client-server/tools"
 	"team-client-server/vos"
 	"time"
@@ -41,6 +43,10 @@ const (
 	TcpTransferCmdCodeOtherUserStatusChange
 	// TcpTransferCmCodeOtherLogin 用户在他处登录
 	TcpTransferCmCodeOtherLogin
+	// TcpTransferCmdCodeQueue 消息队列的消息推送
+	TcpTransferCmdCodeQueue
+	// TcpTransferCmdCodeChatMsgChange 聊天消息交换
+	TcpTransferCmdCodeChatMsgChange
 )
 
 // TcpTransferInfo tcp转移信息, 用于tcp消息转换为ws消息
@@ -92,6 +98,7 @@ var (
 const (
 	LocalWebServerAddress = "https://apps.byzk.cn:443"
 	LocalWSServerAddress  = "wss://apps.byzk.cn:443"
+	nsqdLookupAddress     = "apps.byzk.cn:8081"
 
 	ServerAddress = "apps.byzk.cn:80"
 
@@ -260,6 +267,10 @@ func Login(username, password string) (err error) {
 		return err
 	}
 
+	if err = queue.StartListenerQueue(nowUserInfo.Id, nowUserInfo.LoginIp, nsqdLookupAddress, queueHandler); err != nil {
+		return err
+	}
+
 	connCloseCh = make(chan struct{}, 1)
 	go userConnHandler(connWrapper, dial)
 
@@ -278,6 +289,11 @@ func userConnHandler(connWrapper *conn.Wrapper, dial net.Conn) {
 
 	isClose := false
 	defer func() {
+		queue.StopListenerQueue()
+		queueLock.Lock()
+		queueMsgMap = make(map[string]*nsq.Message)
+		queueLock.Unlock()
+
 		stopWsChat()
 		operationCh <- 1
 		close(cmdCh)
