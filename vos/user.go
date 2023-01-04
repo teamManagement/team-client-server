@@ -1,6 +1,16 @@
 package vos
 
+import "time"
+
 type UserStatus uint8
+
+// CommonField 通用字段
+type CommonField struct {
+	// CreateAt 创建时间
+	CreatedAt time.Time `json:"createdAt,omitempty"`
+	// UpdateAt 更新时间
+	UpdatedAt time.Time `json:"updatedAt,omitempty"`
+}
 
 const (
 	// UserStatusPrepare 预录入数据
@@ -41,7 +51,7 @@ type UserDeptMain struct {
 	// DeptId 部门ID
 	DeptId string `json:"deptId,omitempty" gorm:"primary_key"`
 	// Department 部门信息
-	Department *Department `json:"department,omitempty" gorm:"foreignKey:deptId"`
+	Department *Organization `json:"department,omitempty" gorm:"foreignKey:deptId"`
 	// Label 标签
 	Label string `json:"name,omitempty"`
 }
@@ -49,43 +59,55 @@ type UserDeptMain struct {
 // Post 岗位表
 type Post struct {
 	// DbCommonField 通用字段
-	Id string `json:"id,omitempty" gorm:"primary_key"`
-	// Name 部门名称
-	Name string `json:"name,omitempty" gorm:"not null"`
-	// DeptId 部门ID
-	DeptId string `json:"dept_id,omitempty"`
-	// Department 部门信息
-	Department *Department `gorm:"foreignKey:deptId"`
-}
-
-// Jobs 职位表
-type Jobs struct {
+	CommonField
 	// Id 职位ID
 	Id string `json:"id,omitempty" gorm:"primary_key"`
 	// Name 部门名称
 	Name string `json:"name,omitempty" gorm:"not null"`
-	// DeptId 部门ID
-	DeptId string `json:"dept_id,omitempty"`
-	// Department 部门信息
-	Department *Department `gorm:"foreignKey:deptId"`
+	// Desc 描述
+	Desc string `json:"desc,omitempty" gorm:"type:text"`
+	// OrgId 机构ID
+	OrgId string `json:"orgId,omitempty"`
 }
 
-// Department 部门表
-type Department struct {
+// Job 职位表
+type Job struct {
+	// DbCommonField 通用字段
+	CommonField
+	// Id 职位ID
+	Id string `json:"id,omitempty" gorm:"primary_key"`
+	// Name 部门名称
+	Name string `json:"name,omitempty" gorm:"not null"`
+	// Desc 描述
+	Desc string `json:"desc,omitempty" gorm:"type:text"`
+	// OrgId 机构ID
+	OrgId string `json:"orgId,omitempty"`
+}
+
+// Organization 部门表
+type Organization struct {
+	// DbCommonField 通用字段
+	CommonField
 	// Id 部门ID
 	Id string `json:"id,omitempty" gorm:"primary_key"`
 	// Name 部门名称
 	Name string `json:"name,omitempty" gorm:"not null;unique"`
 	// Pid 上级部门ID
 	Pid string `json:"pid,omitempty"`
-	// Jobs 职位
-	Jobs []*Jobs `json:"jobList,omitempty" gorm:"foreignKey:dept_id"`
-	// Posts 岗位列表
-	Posts []*Post `json:"postList,omitempty" gorm:"foreignKey:dept_id"`
-	// Users 人员列表
-	Users []*UserInfo `json:"userList,omitempty" gorm:"foreignKey:user_dept"`
-	// MainList 部门主管人员列表
-	MainList []*UserDeptMain `json:"MainList,omitempty" gorm:"foreignKey:dept_id"`
+	// Icon 图标
+	Icon string `json:"icon,omitempty"`
+	// Desc 描述
+	Desc string `json:"desc,omitempty" gorm:"type:text"`
+	// CreateUserId 创建者ID
+	CreateUserId string `json:"createUserId,omitempty"`
+	// Children 子级
+	Children []*Organization `json:"children,omitempty" gorm:"-"`
+	// ChildrenIdList 下级ID列表
+	ChildrenIdList []string `json:"childrenIdList,omitempty" gorm:"-"`
+	// Parent 父节点
+	Parent *Organization `json:"parent,omitempty" gorm:"-"`
+	// ParentIdList 上级id列表
+	ParentIdList []string `json:"parentId,omitempty" gorm:"-"`
 }
 
 // UserDeptInfo 用户所在部门信息
@@ -97,9 +119,9 @@ type UserDeptInfo struct {
 	// DeptId 部门Id
 	DeptId string `json:"deptId,omitempty" gorm:"primary_key;"`
 	// Department 部门信息
-	Department *Department `json:"department,omitempty" gorm:"foreignKey:deptId"`
+	Department *Organization `json:"department,omitempty" gorm:"foreignKey:deptId"`
 	// Jobs 职位列表
-	Jobs []*Jobs `json:"jobs,omitempty" gorm:"many2many:db_user_dept_jobs;foreignKey:deptId;"`
+	Jobs []*Job `json:"jobs,omitempty" gorm:"many2many:db_user_dept_jobs;foreignKey:deptId;"`
 	// Posts 岗位列表
 	Posts []*Post `json:"posts,omitempty" gorm:"many2many:db_user_dept_posts;foreignKey:deptId"`
 }
@@ -118,6 +140,14 @@ type Nation struct {
 	Id string `json:"Id,omitempty" gorm:"primary_key"`
 	// Name 名族名称
 	Name string `json:"name,omitempty" gorm:"not null"`
+}
+
+// UserOrgWrapperInfo 用户的机构信息包装
+type UserOrgWrapperInfo struct {
+	Org    *Organization `json:"org,omitempty" json:"org,omitempty"`
+	Job    *Job          `json:"job,omitempty" json:"job,omitempty"`
+	Post   *Post         `json:"post,omitempty" json:"post,omitempty"`
+	IsMain bool          `json:"isMain,omitempty" json:"isMain,omitempty"`
 }
 
 // UserInfo 用户信息
@@ -172,6 +202,10 @@ type UserInfo struct {
 	IsInitManger bool `json:"isInitManger,omitempty"`
 	// Icon 头像
 	Icon string `json:"icon,omitempty" gorm:"type:longtext;"`
+	// OrgList  机构列表
+	OrgList []*UserOrgWrapperInfo `json:"orgList,omitempty" gorm:"-"`
+	// NowOrgInfo 当前机构信息
+	NowOrgInfo *UserOrgWrapperInfo `json:"nowOrgInfo,omitempty" gorm:"-"`
 	// CachePassword 用户密码
 	CachePassword string `json:"-"`
 	// Age 年龄

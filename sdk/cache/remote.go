@@ -8,16 +8,18 @@ import (
 
 func initRemoteServerCache(routes *gin.RouterGroup) {
 	routes.Group("/remote").
-		POST("/user/list", ginmiddleware.WrapperResponseHandle(remoteUserList))
+		POST("/user/list", ginmiddleware.WrapperResponseHandle(remoteUserList)).
+		POST("/org/list", ginmiddleware.WrapperResponseHandle(remoteOrgList))
 }
 
 var (
 	// remoteUserList 获取远程用户列表
 	remoteUserList ginmiddleware.ServiceFun = func(ctx *gin.Context) interface{} {
-		res := remoteserver.GetCacheByType(remoteserver.CacheTypeUserList)
-		if res == "" {
-			res = "[]"
-		}
-		return res
+		return remoteserver.GetCacheByType(remoteserver.CacheTypeUserList)
+	}
+
+	// remoteOrgList 远程机构列表
+	remoteOrgList ginmiddleware.ServiceFun = func(ctx *gin.Context) interface{} {
+		return remoteserver.GetCacheByType(remoteserver.CacheTypeOrgList)
 	}
 )

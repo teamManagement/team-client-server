@@ -5,10 +5,13 @@ var remoteCache = make(map[CacheType]string)
 type CacheType string
 
 const (
+	// CacheTypeUserList 用户列表缓存
 	CacheTypeUserList CacheType = "/cache/user/list"
+	// CacheTypeOrgList 机构列表缓存
+	CacheTypeOrgList CacheType = "/cache/org/list"
 )
 
-var cachePathList = []CacheType{CacheTypeUserList}
+var cachePathList = []CacheType{CacheTypeUserList, CacheTypeOrgList}
 
 func FlushAllCache() error {
 	for _, cacheKey := range cachePathList {
@@ -29,5 +32,9 @@ func FlushCacheByType(t CacheType) error {
 }
 
 func GetCacheByType(t CacheType) string {
-	return remoteCache[t]
+	res := remoteCache[t]
+	if res == "" {
+		res = "[]"
+	}
+	return res
 }
