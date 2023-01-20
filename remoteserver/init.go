@@ -19,6 +19,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"team-client-server/config"
 	"team-client-server/queue"
 	"team-client-server/tools"
 	"team-client-server/vos"
@@ -96,12 +97,6 @@ var (
 )
 
 const (
-	LocalWebServerAddress = "https://apps.byzk.cn:443"
-	LocalWSServerAddress  = "wss://apps.byzk.cn:443"
-	nsqdLookupAddress     = "apps.byzk.cn:8081"
-
-	ServerAddress = "apps.byzk.cn:80"
-
 	autoLoginSettingKey = "USER_CREDENTIALS"
 )
 
@@ -155,7 +150,7 @@ func Login(username, password string) (err error) {
 		return fmt.Errorf("密码格式解析失败: %s", err.Error())
 	}
 
-	localInter, ok := tools.TelnetHostRangeNetInterfaces(ServerAddress)
+	localInter, ok := tools.TelnetHostRangeNetInterfaces(config.ServerAddress)
 	if !ok {
 		return fmt.Errorf("未识别到可用的网卡信息")
 	}
@@ -177,7 +172,7 @@ func Login(username, password string) (err error) {
 		LocalAddr: localAddr,
 	}
 
-	dial, err := tls.DialWithDialer(dialer, "tcp", ServerAddress, tools.GenerateTLSConfig())
+	dial, err := tls.DialWithDialer(dialer, "tcp", config.ServerAddress, tools.GenerateTLSConfig())
 	if err != nil {
 		return fmt.Errorf("连接远程服务失败: %s", err.Error())
 	}
@@ -267,9 +262,9 @@ func Login(username, password string) (err error) {
 		return err
 	}
 
-	if err = queue.StartListenerQueue(nowUserInfo.Id, nowUserInfo.LoginIp, nsqdLookupAddress, queueHandler); err != nil {
-		return err
-	}
+	//if err = queue.StartListenerQueue(nowUserInfo.Id, nowUserInfo.LoginIp, config.nsqdLookupAddress, queueHandler); err != nil {
+	//	return err
+	//}
 
 	connCloseCh = make(chan struct{}, 1)
 	go userConnHandler(connWrapper, dial)

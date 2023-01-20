@@ -11,6 +11,7 @@ import (
 	"io"
 	"net/http"
 	"sync"
+	"team-client-server/config"
 	"team-client-server/vos"
 )
 
@@ -72,7 +73,7 @@ func startChatWs() (err error) {
 			InsecureSkipVerify: true,
 		},
 	}
-	wsChatConn, wsChatHttpResponse, err = dialer.Dial(LocalWSServerAddress+"/ws/chat", http.Header{
+	wsChatConn, wsChatHttpResponse, err = dialer.Dial(config.LocalWSServerAddress+"/ws/chat", http.Header{
 		"_t":         []string{Token()},
 		"_a":         []string{LoginIp()},
 		"User-Agent": []string{"teamManageLocal"},

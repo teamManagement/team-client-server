@@ -5,6 +5,7 @@ import (
 	"fmt"
 	ginmiddleware "github.com/teamManagement/gin-middleware"
 	"strings"
+	"team-client-server/config"
 	"team-client-server/tools"
 )
 
@@ -27,7 +28,7 @@ func RequestWebServiceToRawReq(url string, data any) (*tools.HttpRequestWrapper,
 		url = "/" + url
 	}
 
-	url = LocalWebServerAddress + url
+	url = config.LocalWebServerAddress + url
 
 	return tools.HttpRequestWithOption(url, option)
 }
@@ -47,7 +48,7 @@ func RequestWebServiceWithData(url string, data any, res any) error {
 		url = "/" + url
 	}
 
-	url = LocalWebServerAddress + url
+	url = config.LocalWebServerAddress + url
 
 	req, err := tools.HttpRequestWithOption(url, option)
 	if err != nil {

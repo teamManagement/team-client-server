@@ -7,7 +7,9 @@ import (
 )
 
 func InitIdWebServices(engine *gin.RouterGroup) {
-	engine.Group("id").POST("create", ginmiddleware.WrapperResponseHandle(idCreate))
+	engine.Group("id").
+		POST("create", ginmiddleware.WrapperResponseHandle(idCreate))
+
 }
 
 var (

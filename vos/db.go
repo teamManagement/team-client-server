@@ -251,6 +251,8 @@ type UserChatMsg struct {
 	UpdatedAt time.Time `json:"updatedAt,omitempty"`
 	// ClientUniqueId 客户端唯一ID
 	ClientUniqueId string `json:"clientUniqueId,omitempty" gorm:"primaryKey"`
+	// TimeStamp 时间戳
+	TimeStamp string `json:"timeStamp,omitempty"`
 	// Status 当前状态
 	Status string `json:"status,omitempty"`
 	// ErrMsg 错误信息

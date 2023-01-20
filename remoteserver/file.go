@@ -11,6 +11,7 @@ import (
 	ginmiddleware "github.com/teamManagement/gin-middleware"
 	"io"
 	"os"
+	"team-client-server/config"
 	"team-client-server/sfnake"
 	"team-client-server/tools"
 	"time"
@@ -46,7 +47,7 @@ var (
 )
 
 func InitLocalService(engine *gin.Engine) {
-	uploadAddress = LocalWebServerAddress + "/fileStorage"
+	uploadAddress = config.LocalWebServerAddress + "/fileStorage"
 	tusConfig.HttpClient = tools.DefaultHttpClient
 
 	// remoteServer/file/userChat

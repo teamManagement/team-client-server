@@ -1,20 +1,25 @@
 package userchat
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/byzk-worker/go-db-utils/sqlite"
 	"github.com/gin-gonic/gin"
 	ginmiddleware "github.com/teamManagement/gin-middleware"
 	"gorm.io/gorm"
+	"strconv"
 	"team-client-server/remoteserver"
+	"team-client-server/tools"
 	"team-client-server/vos"
+	"time"
 )
 
 func InitUserChatWebService(engine *gin.RouterGroup) {
 	engine.Group("chat").
 		POST("msg/put", ginmiddleware.WrapperResponseHandle(chatMsgPut)).
-		POST("msg/query", ginmiddleware.WrapperResponseHandle(chatMsgQuery))
+		POST("msg/query", ginmiddleware.WrapperResponseHandle(chatMsgQuery)).
+		POST("msg/query/end/:targetId", ginmiddleware.WrapperResponseHandle(chatMsgQueryEnd))
 }
 
 var (
@@ -101,5 +106,47 @@ var (
 		}
 
 		return userChatMsgList
+	}
+
+	// chatMsgQueryEnd 消息列表查询最后的几条消息
+	chatMsgQueryEnd ginmiddleware.ServiceFun = func(ctx *gin.Context) interface{} {
+		currentUser, err := remoteserver.NowUser()
+		if err != nil {
+			return err
+		}
+
+		targetId := ctx.Param("targetId")
+		queryNumStr := ctx.Query("num")
+
+		queryNum, err := strconv.Atoi(queryNumStr)
+		if err != nil || queryNum == 0 {
+			queryNum = 30
+		}
+
+		endTime := ctx.Query("end")
+
+		//reverse := ctx.Query("reverse")
+		//if reverse != "" {
+		//	reverse = ""
+		//} else {
+		//	reverse = "desc"
+		//}
+
+		userChatListWhere := sqlite.Db().Model(&vos.UserChatMsg{}).Where("(target_id=? and source_id=?) or (source_id=? and target_id=?)", targetId, currentUser.Id, targetId, currentUser.Id)
+		if endTime != "" {
+			var t time.Time
+			if err = json.Unmarshal([]byte("\""+endTime+"\""), &t); err != nil {
+				return fmt.Errorf("时间格式错误: %w", err)
+			}
+
+			userChatListWhere = userChatListWhere.Where("updated_at < ?", t)
+		}
+
+		var userChatMsgList []*vos.UserChatMsg
+		if err = userChatListWhere.Order("updated_at desc").Limit(queryNum).Find(&userChatMsgList).Error; err != nil && err != gorm.ErrRecordNotFound {
+			return fmt.Errorf("查询用户消息列表失败: %s", err.Error())
+		}
+
+		return tools.SliceReverse[*vos.UserChatMsg](userChatMsgList)
 	}
 )
