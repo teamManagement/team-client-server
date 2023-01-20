@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Image, Tabs, Divider, Carousel, List, Button, message, Modal } from 'antd'
-import { applications } from '@byzk/teamwork-inside-sdk'
-import { AppInfo } from '@byzk/teamwork-sdk'
+import { applications } from '@teamworktoolbox/inside-sdk'
+import { AppInfo } from '@teamworktoolbox/sdk'
 import { CloudDownloadOutlined, CloudUploadOutlined } from '@ant-design/icons';
 import './index.less'
 

@@ -6,7 +6,7 @@ import { MenuItemInfo, UserInfo } from "./types";
 import { Routes, useLocation, useNavigate } from "react-router-dom";
 import { LayoutContentEles } from "./LayoutItemMap";
 import { MessagePlugin } from 'tdesign-react'
-import { api } from '@byzk/teamwork-inside-sdk'
+import { api } from '@teamworktoolbox/inside-sdk'
 import "./index.less";
 
 const { Header, Sider, Content } = Layout;

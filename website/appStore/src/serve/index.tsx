@@ -1,5 +1,5 @@
 import { Modal } from "antd";
-import { api } from '@byzk/teamwork-inside-sdk'
+import { api } from '@teamworktoolbox/inside-sdk'
 
 
 export const getSignCert = async (errorCb?: any) => api.proxyHttpCoreServer('')

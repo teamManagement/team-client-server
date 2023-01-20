@@ -4,8 +4,8 @@ import { IconPro } from "../../components/Icons";
 import { CloudDownloadOutlined, CloudUploadOutlined } from '@ant-design/icons';
 import { getAppTypeList } from "../../serve";
 import Detail from "./Detail";
-import { store } from '@byzk/teamwork-sdk';
-import { applications } from '@byzk/teamwork-inside-sdk';
+import { store } from '@teamworktoolbox/sdk';
+import { applications } from '@teamworktoolbox/inside-sdk';
 
 
 interface IAppDetailProps {
