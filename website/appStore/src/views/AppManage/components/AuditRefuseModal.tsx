@@ -30,7 +30,7 @@ const AuditRefuseModal = forwardRef((props: IAuditRefuseModalProps, ref) => {
     const onSubmit = useCallback(({ reason: string }: any) => {
         setSubmitLoading(true);
 
-        var id = auditInfo?.id;
+        // var id = auditInfo?.id;
         //调用接口todo
 
         setSubmitLoading(false);

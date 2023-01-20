@@ -5,7 +5,7 @@ import { IconPro } from "../components/Icons";
 import { MenuItemInfo, UserInfo } from "./types";
 import { Routes, useLocation, useNavigate } from "react-router-dom";
 import { LayoutContentEles } from "./LayoutItemMap";
-import { MessagePlugin } from 'tdesign-react'
+// import { MessagePlugin } from 'tdesign-react'
 import { api } from '@teamworktoolbox/inside-sdk'
 import "./index.less";
 
@@ -26,7 +26,7 @@ export default function LayoutView(): React.ReactNode {
   const [menuContentItems, setMenuContentItems] = useState<MenuItemInfo[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
 
-  const [userInfo, setUserInfo] = useState<UserInfo | undefined>(undefined)
+  const [, setUserInfo] = useState<UserInfo | undefined>(undefined)
 
 
 

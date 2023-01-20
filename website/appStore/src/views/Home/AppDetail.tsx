@@ -1,6 +1,6 @@
 import { Button, Divider, Image, message, Modal, Spin } from "antd";
 import { FC, useCallback, useEffect, useRef, useState } from "react";
-import { IconPro } from "../../components/Icons";
+// import { IconPro } from "../../components/Icons";
 import { CloudDownloadOutlined, CloudUploadOutlined } from '@ant-design/icons';
 import { getAppTypeList } from "../../serve";
 import Detail from "./Detail";
@@ -22,7 +22,7 @@ const AppDetail: FC<IAppDetailProps> = (props) => {
   const [ifDetail, setIfDetail] = useState<boolean>(false)
   const fnsRef = useRef<any>()
   const [appName, setAppName] = useState<string>()
-  const [showOne, setShowOne] = useState<boolean>(true)
+  const [showOne, ] = useState<boolean>(true)
   const [ifInstall, setIfInstall] = useState<any[]>([])
   const [loading, setLoading] = useState<boolean>(false)
   const [mDetail, setMDetail] = useState<any>()
