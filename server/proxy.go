@@ -32,7 +32,7 @@ var keyLock = lockKey.NewKeyLock()
 var localWebServerHttpProxy *httputil.ReverseProxy
 
 func init() {
-	uri, err := url.Parse(config.LocalWebServerAddress)
+	uri, err := url.Parse(config.LocalWebServerAddress())
 	if err != nil {
 		logs.Fatalf("解析web服务器地址格式失败: %s", err.Error())
 		os.Exit(10)

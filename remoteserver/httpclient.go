@@ -28,7 +28,7 @@ func RequestWebServiceToRawReq(url string, data any) (*tools.HttpRequestWrapper,
 		url = "/" + url
 	}
 
-	url = config.LocalWebServerAddress + url
+	url = config.LocalWebServerAddress() + url
 
 	return tools.HttpRequestWithOption(url, option)
 }
@@ -48,7 +48,7 @@ func RequestWebServiceWithData(url string, data any, res any) error {
 		url = "/" + url
 	}
 
-	url = config.LocalWebServerAddress + url
+	url = config.LocalWebServerAddress() + url
 
 	req, err := tools.HttpRequestWithOption(url, option)
 	if err != nil {

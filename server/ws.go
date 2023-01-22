@@ -127,7 +127,12 @@ func (s *SocketWrapper) checkRemoteServerLoop() {
 				close(s.closeRemoteServerRestoreCh)
 				return
 			case <-restoreTime:
-				if !tools.TelnetHost(config.ServerAddress) {
+				tcpServerAddress, err := remoteserver.GetServerTcpAddress()
+				if err != nil {
+					continue
+				}
+
+				if !tools.TelnetHost(tcpServerAddress) {
 					continue
 				}
 

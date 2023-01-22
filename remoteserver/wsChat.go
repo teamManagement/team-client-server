@@ -70,7 +70,7 @@ func startChatWs() (err error) {
 	dialer := &websocket.Dialer{
 		TLSClientConfig: config.HttpsTlsConfig,
 	}
-	wsChatConn, wsChatHttpResponse, err = dialer.Dial(config.LocalWSServerAddress+"/ws/chat", http.Header{
+	wsChatConn, wsChatHttpResponse, err = dialer.Dial(config.LocalWSServerAddress()+"/ws/chat", http.Header{
 		"_t":         []string{Token()},
 		"_a":         []string{LoginIp()},
 		"User-Agent": []string{"teamManageLocal"},

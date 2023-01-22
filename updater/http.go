@@ -254,7 +254,7 @@ func downloadReleasePackage(t string, localSavePath string) error {
 
 func requestToRemoteServer(url string, fn func(resp *http.Response) error) error {
 
-	resp, err := tools.DefaultHttpClient.Get(config.LocalWebServerAddress + url)
+	resp, err := tools.DefaultHttpClient.Get(config.LocalWebServerAddress() + url)
 	if err != nil {
 		return err
 	}

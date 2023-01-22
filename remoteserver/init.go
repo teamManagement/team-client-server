@@ -19,7 +19,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"team-client-server/config"
 	"team-client-server/db"
 	"team-client-server/queue"
 	"team-client-server/tools"
@@ -151,7 +150,12 @@ func Login(username, password string) (err error) {
 		return fmt.Errorf("密码格式解析失败: %s", err.Error())
 	}
 
-	localInter, ok := tools.TelnetHostRangeNetInterfaces(config.ServerAddress)
+	tcpAddress, err := GetServerTcpAddress()
+	if err != nil {
+		return err
+	}
+
+	localInter, ok := tools.TelnetHostRangeNetInterfaces(tcpAddress)
 	if !ok {
 		return fmt.Errorf("未识别到可用的网卡信息")
 	}
@@ -173,7 +177,7 @@ func Login(username, password string) (err error) {
 		LocalAddr: localAddr,
 	}
 
-	dial, err := tls.DialWithDialer(dialer, "tcp", config.ServerAddress, tools.GenerateTLSConfig())
+	dial, err := tls.DialWithDialer(dialer, "tcp", tcpAddress, tools.GenerateTLSConfig())
 	if err != nil {
 		return fmt.Errorf("连接远程服务失败: %s", err.Error())
 	}

@@ -1,9 +1,16 @@
 package config
 
-const (
-	LocalWebServerAddress = "https://apps.byzk.cn:443"
-	LocalWSServerAddress  = "wss://apps.byzk.cn:443"
-	nsqdLookupAddress     = "apps.byzk.cn:8081"
+var serverDomain string
 
-	ServerAddress = "apps.byzk.cn:828"
+var (
+	localWebServerAddress = "https://" + serverDomain
+	localWSServerAddress  = "wss://" + serverDomain
 )
+
+func LocalWebServerAddress() string {
+	return localWebServerAddress
+}
+
+func LocalWSServerAddress() string {
+	return localWSServerAddress
+}

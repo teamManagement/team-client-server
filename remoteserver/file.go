@@ -47,7 +47,7 @@ var (
 )
 
 func InitLocalService(engine *gin.Engine) {
-	uploadAddress = config.LocalWebServerAddress + "/fileStorage"
+	uploadAddress = config.LocalWebServerAddress() + "/fileStorage"
 	tusConfig.HttpClient = tools.DefaultHttpClient
 
 	// remoteServer/file/userChat
