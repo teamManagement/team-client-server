@@ -8,6 +8,7 @@ import (
 	ginmiddleware "github.com/teamManagement/gin-middleware"
 	"gorm.io/gorm"
 	"strings"
+	"team-client-server/db"
 	"team-client-server/remoteserver"
 	"team-client-server/vos"
 )
@@ -59,7 +60,7 @@ var (
 			return err
 		}
 
-		var addAppInfo *vos.Application
+		var addAppInfo *db.Application
 		if err = ctx.ShouldBindJSON(&addAppInfo); err != nil {
 			return fmt.Errorf("解析待调试应用信息失败: %s", err.Error())
 		}
@@ -72,7 +73,7 @@ var (
 			addAppInfo.Id += "-debug"
 		}
 
-		if addAppInfo.Type == vos.ApplicationTypeLocalWeb {
+		if addAppInfo.Type == db.ApplicationTypeLocalWeb {
 			return errors.New("暂不支持本地文件的调试模式")
 		}
 
@@ -83,7 +84,7 @@ var (
 		addAppInfo.Debugging = true
 		addAppInfo.Url = addAppInfo.RemoteSiteUrl
 		addAppInfo.UserId = nowUser.Id
-		addAppInfo.Status = vos.ApplicationStatusNormal
+		addAppInfo.Status = db.ApplicationStatusNormal
 
 		return sqlite.Db().Transaction(func(tx *gorm.DB) error {
 			return appHandlerInstallInfo(tx, addAppInfo, nowUser.Id)
@@ -121,7 +122,7 @@ var (
 		}
 
 		count := int64(0)
-		if err := sqlite.Db().Model(&vos.Application{}).Where("id=? and user_id=?", appId, nowUser.Id).Count(&count).Error; err != nil {
+		if err := sqlite.Db().Model(&db.Application{}).Where("id=? and user_id=?", appId, nowUser.Id).Count(&count).Error; err != nil {
 			return fmt.Errorf("查询应用安装情况失败: %s", err.Error())
 		}
 
@@ -129,7 +130,7 @@ var (
 			return errors.New("应用信息已安装")
 		}
 
-		var appInfo *vos.Application
+		var appInfo *db.Application
 		if err := remoteserver.RequestWebServiceWithResponse("/app/install/"+appId, &appInfo); err != nil {
 			return err
 		}
@@ -161,8 +162,8 @@ var (
 		if err != nil {
 			return err
 		}
-		appList := make([]*vos.Application, 0)
-		if err := sqlite.Db().Where("status=? and user_id=?", vos.ApplicationStatusNormal, nowUser.Id).Find(&appList).Error; err != nil && err != gorm.ErrRecordNotFound {
+		appList := make([]*db.Application, 0)
+		if err := sqlite.Db().Where("status=? and user_id=?", db.ApplicationStatusNormal, nowUser.Id).Find(&appList).Error; err != nil && err != gorm.ErrRecordNotFound {
 			return fmt.Errorf("查询应用列表失败: %s", err.Error())
 		}
 
@@ -170,7 +171,7 @@ var (
 			appInfo := appList[i]
 			if !appInfo.HaveRemoteDb && !appInfo.Debugging {
 				_ = sqlite.Db().Transaction(func(tx *gorm.DB) error {
-					if err = tx.Model(&vos.Application{}).Where("id=? and user_id=? and not debugging", appInfo.Id, appInfo.UserId).Update("have_remote_db", true).Error; err != nil {
+					if err = tx.Model(&db.Application{}).Where("id=? and user_id=? and not debugging", appInfo.Id, appInfo.UserId).Update("have_remote_db", true).Error; err != nil {
 						return err
 					}
 					if err := remoteserver.RequestWebService("/app/db/create/" + appInfo.Id); err != nil {
@@ -198,7 +199,7 @@ var (
 
 		appId := ctx.Param("appId")
 		return sqlite.Db().Transaction(func(tx *gorm.DB) error {
-			appModalWhere := tx.Model(&vos.Application{}).Where("id=? and user_id=? and status='4' and not debugging", appId, nowUser.Id)
+			appModalWhere := tx.Model(&db.Application{}).Where("id=? and user_id=? and status='4' and not debugging", appId, nowUser.Id)
 
 			var count int64
 			if err := appModalWhere.Count(&count).Error; err != nil {
@@ -218,16 +219,16 @@ var (
 	}
 )
 
-func appForceFlushDesktop(nowUser *vos.UserInfo) ([]*vos.Application, error) {
-	var appList []*vos.Application
+func appForceFlushDesktop(nowUser *vos.UserInfo) ([]*db.Application, error) {
+	var appList []*db.Application
 	if err := remoteserver.RequestWebServiceWithResponse("/app/list", &appList); err != nil {
 		return nil, fmt.Errorf("获取应用列表失败: %s", err.Error())
 	}
 
 	if err := sqlite.Db().Transaction(func(tx *gorm.DB) error {
-		appModel := tx.Model(&vos.Application{})
-		appModel.Where("debugging is null or not debugging").UpdateColumns(&vos.Application{
-			Status: vos.ApplicationStatusTakeDown,
+		appModel := tx.Model(&db.Application{})
+		appModel.Where("debugging is null or not debugging").UpdateColumns(&db.Application{
+			Status: db.ApplicationStatusTakeDown,
 		})
 		for i := range appList {
 			appInfo := appList[i]
@@ -244,7 +245,7 @@ func appForceFlushDesktop(nowUser *vos.UserInfo) ([]*vos.Application, error) {
 }
 
 // appHandlerUninstallInfo 处理应用
-func appHandlerUninstallInfo(db *gorm.DB, userId, appId string) error {
+func appHandlerUninstallInfo(gormDb *gorm.DB, userId, appId string) error {
 	if userId == "" {
 		return errors.New("缺失当前用户信息")
 	}
@@ -253,21 +254,21 @@ func appHandlerUninstallInfo(db *gorm.DB, userId, appId string) error {
 		return errors.New("缺失应用信息")
 	}
 
-	if err := db.Migrator().DropTable(getAppStoreTableName(appId, userId)); err != nil {
+	if err := gormDb.Migrator().DropTable(getAppStoreTableName(appId, userId)); err != nil {
 		return fmt.Errorf("删除应用存储失败: %s", err.Error())
 	}
 
-	if err := db.Model(&vos.Application{}).Where("id=? and user_id=?", appId, userId).Delete(&vos.Application{}).Error; err != nil {
+	if err := gormDb.Model(&db.Application{}).Where("id=? and user_id=?", appId, userId).Delete(&db.Application{}).Error; err != nil {
 		return fmt.Errorf("删除应用信息失败: %s", err.Error())
 	}
 	return nil
 }
 
 // appHandlerInstallInfo 处理应用的安装信息
-func appHandlerInstallInfo(db *gorm.DB, appInfo *vos.Application, userId string) (err error) {
+func appHandlerInstallInfo(gormDb *gorm.DB, appInfo *db.Application, userId string) (err error) {
 	//defer func() {
 	//	if err != nil {
-	//		_ = appHandlerUninstallInfo(db, userId, appInfo.Id)
+	//		_ = appHandlerUninstallInfo(gormDb, userId, appInfo.Id)
 	//	}
 	//}()
 	if appInfo == nil || appInfo.Id == "" {
@@ -279,18 +280,18 @@ func appHandlerInstallInfo(db *gorm.DB, appInfo *vos.Application, userId string)
 	}
 
 	appStoreTableName := getAppStoreTableName(appInfo.Id, userId)
-	appModel := db.Model(&vos.Application{})
+	appModel := gormDb.Model(&db.Application{})
 	switch appInfo.Type {
-	case vos.ApplicationTypeRemoteWeb:
+	case db.ApplicationTypeRemoteWeb:
 		appInfo.Url = appInfo.RemoteSiteUrl
-	case vos.ApplicationTypeLocalWeb:
+	case db.ApplicationTypeLocalWeb:
 		return errors.New("暂不支持本地应用模式")
 	default:
 		return errors.New("未知的应用模式")
 	}
 	appInfo.UserId = userId
 
-	if err := db.Table(appStoreTableName).AutoMigrate(&vos.Setting{}); err != nil {
+	if err := gormDb.Table(appStoreTableName).AutoMigrate(&db.Setting{}); err != nil {
 		return fmt.Errorf("创建应用存储失败: %s", err.Error())
 	}
 

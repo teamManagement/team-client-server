@@ -7,7 +7,7 @@ import (
 	"github.com/nsqio/go-nsq"
 	"gorm.io/gorm"
 	"sync"
-	"team-client-server/vos"
+	"team-client-server/db"
 	"time"
 )
 
@@ -19,14 +19,14 @@ var (
 )
 
 var queueHandler nsq.HandlerFunc = func(message *nsq.Message) error {
-	var queueChannelMsgInfo *vos.QueueChannelMsgInfo
+	var queueChannelMsgInfo *db.QueueChannelMsgInfo
 
 	msgId := string(message.ID[:])
 	queueLock.Lock()
 	defer queueLock.Unlock()
-	queueChannelMsgInfoModal := sqlite.Db().Model(&vos.QueueChannelMsgInfo{})
+	queueChannelMsgInfoModal := sqlite.Db().Model(&db.QueueChannelMsgInfo{})
 
-	if err := queueChannelMsgInfoModal.Where("id=? and queue_type=?", msgId, vos.QueueTypeReceive).First(&queueChannelMsgInfo).Error; err != nil && err != gorm.ErrRecordNotFound {
+	if err := queueChannelMsgInfoModal.Where("id=? and queue_type=?", msgId, db.QueueTypeReceive).First(&queueChannelMsgInfo).Error; err != nil && err != gorm.ErrRecordNotFound {
 		message.Requeue(requeueDelay)
 		return nil
 	}

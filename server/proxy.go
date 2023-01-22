@@ -22,9 +22,9 @@ import (
 	"path/filepath"
 	"strings"
 	"team-client-server/config"
+	"team-client-server/db"
 	"team-client-server/remoteserver"
 	"team-client-server/tools"
-	"team-client-server/vos"
 )
 
 var keyLock = lockKey.NewKeyLock()
@@ -93,9 +93,9 @@ func cacheHttpSuccessResponse(response *http.Response) error {
 			return
 		}
 
-		proxyHttpResponseCacheModel := sqlite.Db().Model(&vos.ProxyHttpResponseCache{})
+		proxyHttpResponseCacheModel := sqlite.Db().Model(&db.ProxyHttpResponseCache{})
 
-		var httpResponseCacheInfo *vos.ProxyHttpResponseCache
+		var httpResponseCacheInfo *db.ProxyHttpResponseCache
 		proxyHttpResponseCacheModel.Select("content_path").Where("request_hash=?", cacheH).First(&httpResponseCacheInfo)
 		if httpResponseCacheInfo != nil {
 			var stat os.FileInfo
@@ -103,7 +103,7 @@ func cacheHttpSuccessResponse(response *http.Response) error {
 				_ = os.Remove(httpResponseCacheInfo.ContentPath)
 			}
 		} else {
-			httpResponseCacheInfo = &vos.ProxyHttpResponseCache{
+			httpResponseCacheInfo = &db.ProxyHttpResponseCache{
 				RequestHash: cacheH,
 			}
 		}
@@ -130,11 +130,11 @@ func httpResponseModify(response *http.Response) error {
 	keyLock.Lock(cacheH)
 	defer keyLock.Unlock(cacheH)
 
-	proxyHttpResponseCache := &vos.ProxyHttpResponseCache{
+	proxyHttpResponseCache := &db.ProxyHttpResponseCache{
 		RequestHash: cacheH,
 	}
 
-	proxyHttpResponseCacheModel := sqlite.Db().Model(&vos.ProxyHttpResponseCache{})
+	proxyHttpResponseCacheModel := sqlite.Db().Model(&db.ProxyHttpResponseCache{})
 	if err := proxyHttpResponseCacheModel.Where(&proxyHttpResponseCache).First(&proxyHttpResponseCache).Error; err != nil {
 		return nil
 	}
@@ -188,7 +188,7 @@ var (
 	}
 
 	proxyRegisterHttpName ginmiddleware.ServiceFun = func(ctx *gin.Context) interface{} {
-		var proxyHttpServerInfo *vos.ProxyHttpServerInfo
+		var proxyHttpServerInfo *db.ProxyHttpServerInfo
 		if err := ctx.ShouldBindJSON(&proxyHttpServerInfo); err != nil {
 			return fmt.Errorf("解析请求参数失败: %s", err.Error())
 		}

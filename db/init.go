@@ -8,7 +8,6 @@ import (
 	"os"
 	"path/filepath"
 	"team-client-server/config"
-	"team-client-server/vos"
 )
 
 var dbFilePath = ""
@@ -39,14 +38,14 @@ func configChange(config *config.Info) {
 
 func initDataTable() {
 	if err := sqlite.Db().
-		AutoMigrate(&vos.Setting{},
-			&vos.Setting{},
-			&vos.ProxyHttpServerInfo{},
-			&vos.ProxyHttpResponseCache{},
-			&vos.UserChatMsg{},
-			&vos.ChatGroupInfo{},
-			&vos.QueueChannelMsgInfo{},
-			&vos.Application{}); err != nil {
+		AutoMigrate(&Setting{},
+			&Setting{},
+			&ProxyHttpServerInfo{},
+			&ProxyHttpResponseCache{},
+			&UserChatMsg{},
+			&ChatGroupInfo{},
+			&QueueChannelMsgInfo{},
+			&Application{}); err != nil {
 		logs.Fatalf("初始化数据库信息失败: %s")
 		os.Exit(10)
 	}

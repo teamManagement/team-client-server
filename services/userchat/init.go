@@ -9,9 +9,9 @@ import (
 	ginmiddleware "github.com/teamManagement/gin-middleware"
 	"gorm.io/gorm"
 	"strconv"
+	"team-client-server/db"
 	"team-client-server/remoteserver"
 	"team-client-server/tools"
-	"team-client-server/vos"
 	"time"
 )
 
@@ -26,7 +26,7 @@ var (
 	// chatMsgPut 聊天消息推送
 	chatMsgPut ginmiddleware.ServiceFun = func(ctx *gin.Context) interface{} {
 		var (
-			chatMsgInfo *vos.UserChatMsg
+			chatMsgInfo *db.UserChatMsg
 
 			err error
 		)
@@ -42,11 +42,11 @@ var (
 			return errors.New("接收者ID不能为空")
 		}
 
-		if chatMsgInfo.MsgType < vos.ChatMsgTypeText || chatMsgInfo.MsgType > vos.ChatMsgTypeImg {
+		if chatMsgInfo.MsgType < db.ChatMsgTypeText || chatMsgInfo.MsgType > db.ChatMsgTypeImg {
 			return errors.New("不支持的消息内容")
 		}
 
-		if chatMsgInfo.ChatType <= vos.ChatUnknown || chatMsgInfo.ChatType > vos.ChatTypeApp {
+		if chatMsgInfo.ChatType <= db.ChatUnknown || chatMsgInfo.ChatType > db.ChatTypeApp {
 			return errors.New("不支持的消息类型")
 		}
 
@@ -55,7 +55,7 @@ var (
 		}
 
 		var count int64
-		if err := sqlite.Db().Model(&vos.UserChatMsg{}).Where("client_unique_id=?", chatMsgInfo.ClientUniqueId).Count(&count).Error; err != nil {
+		if err := sqlite.Db().Model(&db.UserChatMsg{}).Where("client_unique_id=?", chatMsgInfo.ClientUniqueId).Count(&count).Error; err != nil {
 			return fmt.Errorf("查询消息暂存数量失败: %s", err.Error())
 		}
 
@@ -63,7 +63,7 @@ var (
 			return errors.New("消息已存在")
 		}
 
-		userChatMsg := &vos.UserChatMsg{
+		userChatMsg := &db.UserChatMsg{
 			TargetId:       chatMsgInfo.TargetId,
 			ChatType:       chatMsgInfo.ChatType,
 			MsgType:        chatMsgInfo.MsgType,
@@ -95,12 +95,12 @@ var (
 			return errors.New("接收对象ID不能为空")
 		}
 
-		userChatListWhere := sqlite.Db().Model(&vos.UserChatMsg{}).Where("(target_id=? and source_id=?) or (target_id=? and source_id=?)", param.TargetId, currentUser.Id, currentUser.Id, param.TargetId)
+		userChatListWhere := sqlite.Db().Model(&db.UserChatMsg{}).Where("(target_id=? and source_id=?) or (target_id=? and source_id=?)", param.TargetId, currentUser.Id, currentUser.Id, param.TargetId)
 		if param.ClientTimeId != "" {
 			userChatListWhere = userChatListWhere.Where("client_unique_id > ?", param.ClientTimeId)
 		}
 
-		var userChatMsgList []*vos.UserChatMsg
+		var userChatMsgList []*db.UserChatMsg
 		if err := userChatListWhere.Order("client_unique_id").Find(&userChatMsgList).Error; err != nil && err != gorm.ErrRecordNotFound {
 			return fmt.Errorf("查询用户消息列表失败: %s", err.Error())
 		}
@@ -132,7 +132,7 @@ var (
 		//	reverse = "desc"
 		//}
 
-		userChatListWhere := sqlite.Db().Model(&vos.UserChatMsg{}).Where("(target_id=? and source_id=?) or (source_id=? and target_id=?)", targetId, currentUser.Id, targetId, currentUser.Id)
+		userChatListWhere := sqlite.Db().Model(&db.UserChatMsg{}).Where("(target_id=? and source_id=?) or (source_id=? and target_id=?)", targetId, currentUser.Id, targetId, currentUser.Id)
 		if endTime != "" {
 			var t time.Time
 			if err = json.Unmarshal([]byte("\""+endTime+"\""), &t); err != nil {
@@ -142,11 +142,11 @@ var (
 			userChatListWhere = userChatListWhere.Where("updated_at < ?", t)
 		}
 
-		var userChatMsgList []*vos.UserChatMsg
+		var userChatMsgList []*db.UserChatMsg
 		if err = userChatListWhere.Order("updated_at desc").Limit(queryNum).Find(&userChatMsgList).Error; err != nil && err != gorm.ErrRecordNotFound {
 			return fmt.Errorf("查询用户消息列表失败: %s", err.Error())
 		}
 
-		return tools.SliceReverse[*vos.UserChatMsg](userChatMsgList)
+		return tools.SliceReverse[*db.UserChatMsg](userChatMsgList)
 	}
 )

@@ -6,8 +6,8 @@ import (
 	"github.com/gin-gonic/gin"
 	ginmiddleware "github.com/teamManagement/gin-middleware"
 	"gorm.io/gorm"
+	"team-client-server/db"
 	"team-client-server/remoteserver"
-	"team-client-server/vos"
 )
 
 func InitApplicationWebResources(engine *gin.RouterGroup) {
@@ -26,8 +26,8 @@ var (
 			return "[]"
 		}
 
-		var applicationList []vos.Application
-		if err := sqlite.Db().Model(&vos.Application{}).Where("user_id=? and not debugging and status=?", nowUser.Id, vos.ApplicationStatusNormal).Find(&applicationList).Error; err != nil && err != gorm.ErrRecordNotFound {
+		var applicationList []db.Application
+		if err := sqlite.Db().Model(&db.Application{}).Where("user_id=? and not debugging and status=?", nowUser.Id, db.ApplicationStatusNormal).Find(&applicationList).Error; err != nil && err != gorm.ErrRecordNotFound {
 			return fmt.Errorf("查询应用列表失败: %s", err.Error())
 		}
 

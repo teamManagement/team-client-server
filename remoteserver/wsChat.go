@@ -1,7 +1,6 @@
 package remoteserver
 
 import (
-	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -12,7 +11,7 @@ import (
 	"net/http"
 	"sync"
 	"team-client-server/config"
-	"team-client-server/vos"
+	"team-client-server/db"
 )
 
 type ChatMsgCmd uint
@@ -37,9 +36,9 @@ type ChatMsgWrapper struct {
 	// ErrMsg 错误消息
 	ErrMsg string `json:"errMsg,omitempty"`
 	// ChatData 单个聊天消息
-	ChatData *vos.UserChatMsg `json:"chatData,omitempty"`
+	ChatData *db.UserChatMsg `json:"chatData,omitempty"`
 	// ChatListData 聊天消息列表
-	ChatListData []*vos.UserChatMsg `json:"chatListData,omitempty"`
+	ChatListData []*db.UserChatMsg `json:"chatListData,omitempty"`
 	// QueryParam 消息查询参数
 	QueryParam ChatMsgQueryParam `json:"queryParam,omitempty"`
 	// Error 是否有错
@@ -69,9 +68,7 @@ func startChatWs() (err error) {
 	wsChatResponseChan = make(chan *ChatMsgWrapper)
 
 	dialer := &websocket.Dialer{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true,
-		},
+		TLSClientConfig: config.HttpsTlsConfig,
 	}
 	wsChatConn, wsChatHttpResponse, err = dialer.Dial(config.LocalWSServerAddress+"/ws/chat", http.Header{
 		"_t":         []string{Token()},
@@ -113,16 +110,16 @@ func chatWsLoop() {
 			}
 
 			var count int64
-			if err := sqlite.Db().Model(&vos.UserChatMsg{}).Where("client_unique_id=?", chatData.ClientUniqueId).Count(&count).Error; err != nil {
+			if err := sqlite.Db().Model(&db.UserChatMsg{}).Where("client_unique_id=?", chatData.ClientUniqueId).Count(&count).Error; err != nil {
 				continue
 			}
 
 			if count > 0 {
-				if err := sqlite.Db().Model(&vos.UserChatMsg{}).Where("client_unique_id=?", chatData.ClientUniqueId).UpdateColumns(&chatData).Error; err != nil {
+				if err := sqlite.Db().Model(&db.UserChatMsg{}).Where("client_unique_id=?", chatData.ClientUniqueId).UpdateColumns(&chatData).Error; err != nil {
 					continue
 				}
 			} else {
-				if err := sqlite.Db().Model(&vos.UserChatMsg{}).Create(&chatData).Error; err != nil {
+				if err := sqlite.Db().Model(&db.UserChatMsg{}).Create(&chatData).Error; err != nil {
 					continue
 				}
 			}
@@ -141,14 +138,14 @@ func chatWsLoop() {
 
 func UserChatFlushLocalByRemoteServer() (err error) {
 	var (
-		chatMsgList   []*vos.UserChatMsg
+		chatMsgList   []*db.UserChatMsg
 		chatEndTimeId string
 	)
 
-	chatMsgGlobalTimeIdSetting := &vos.Setting{
+	chatMsgGlobalTimeIdSetting := &db.Setting{
 		Name: "chat_msg_global_time_id",
 	}
-	if err = sqlite.Db().Model(&vos.Setting{}).Where(&chatMsgGlobalTimeIdSetting).Find(&chatMsgGlobalTimeIdSetting).Error; err != nil || chatMsgGlobalTimeIdSetting.Value == "" {
+	if err = sqlite.Db().Model(&db.Setting{}).Where(&chatMsgGlobalTimeIdSetting).Find(&chatMsgGlobalTimeIdSetting).Error; err != nil || chatMsgGlobalTimeIdSetting.Value == "" {
 		chatMsgList, chatEndTimeId, err = UserChatQueryAll()
 	} else {
 		chatMsgList, chatEndTimeId, err = UserChatQueryTimeIdAfter(string(chatMsgGlobalTimeIdSetting.Value))
@@ -160,7 +157,7 @@ func UserChatFlushLocalByRemoteServer() (err error) {
 
 	return sqlite.Db().Transaction(func(tx *gorm.DB) error {
 		if chatEndTimeId != "" {
-			chatMsgGlobalTimeIdSetting.Value = vos.EncryptValue(chatEndTimeId)
+			chatMsgGlobalTimeIdSetting.Value = db.EncryptValue(chatEndTimeId)
 			if err = tx.Save(&chatMsgGlobalTimeIdSetting).Error; err != nil {
 				return fmt.Errorf("更新消息标识失败: %s", err.Error())
 			}
@@ -198,7 +195,7 @@ func userChatWriteWrapperDataAndResponse(wrapper *ChatMsgWrapper) (*ChatMsgWrapp
 	return res, nil
 }
 
-func UserChatQueryAll() ([]*vos.UserChatMsg, string, error) {
+func UserChatQueryAll() ([]*db.UserChatMsg, string, error) {
 	res, err := userChatWriteWrapperDataAndResponse(&ChatMsgWrapper{
 		Cmd: ChatMsgCmdGetList,
 	})
@@ -209,7 +206,7 @@ func UserChatQueryAll() ([]*vos.UserChatMsg, string, error) {
 	return res.ChatListData, res.QueryParam.TimeId, err
 }
 
-func UserChatQueryTimeIdAfter(timeId string) ([]*vos.UserChatMsg, string, error) {
+func UserChatQueryTimeIdAfter(timeId string) ([]*db.UserChatMsg, string, error) {
 
 	res, err := userChatWriteWrapperDataAndResponse(&ChatMsgWrapper{
 		Cmd: ChatMsgCmdGetList,
@@ -225,7 +222,7 @@ func UserChatQueryTimeIdAfter(timeId string) ([]*vos.UserChatMsg, string, error)
 	return res.ChatListData, res.QueryParam.TimeId, nil
 }
 
-func UserChatPut(chatData *vos.UserChatMsg) (*vos.UserChatMsg, error) {
+func UserChatPut(chatData *db.UserChatMsg) (*db.UserChatMsg, error) {
 
 	res, err := userChatWriteWrapperDataAndResponse(&ChatMsgWrapper{
 		Cmd:      ChatMsgCmdPut,

@@ -1,4 +1,4 @@
-package vos
+package db
 
 import (
 	"bytes"
@@ -8,8 +8,9 @@ import (
 	"fmt"
 	"github.com/go-base-lib/coderutils"
 	"github.com/go-base-lib/goextension"
+	"team-client-server/config"
 	"team-client-server/queue"
-	"team-client-server/tools"
+	"team-client-server/vos"
 	"time"
 )
 
@@ -25,7 +26,7 @@ func (e EncryptValue) Value() (driver.Value, error) {
 		return nil, err
 	}
 
-	encryptKey, err := coderutils.RsaEncrypt(key, tools.ClientPublicKey)
+	encryptKey, err := coderutils.RsaEncrypt(key, config.ClientPublicKey)
 	if err != nil {
 		return nil, err
 	}
@@ -53,7 +54,7 @@ func (e *EncryptValue) Scan(src any) error {
 
 	encryptSm4Key := bytes[:encryptValCipherKeyLen]
 
-	sm4Key, err := coderutils.RsaDecrypt(encryptSm4Key, tools.ClientPrivateKey)
+	sm4Key, err := coderutils.RsaDecrypt(encryptSm4Key, config.ClientPrivateKey)
 	if err != nil {
 		return err
 	}
@@ -147,7 +148,7 @@ type Application struct {
 	// Version 版本
 	Version string `json:"version,omitempty"`
 	// ReleaseList 发布过的版本列表
-	ReleaseList []*ReleaseDigest `json:"releaseList,omitempty" gorm:"-"`
+	ReleaseList []*vos.ReleaseDigest `json:"releaseList,omitempty" gorm:"-"`
 	// Status 应用状态
 	Status ApplicationStatus `json:"status"`
 	// Recommend 是否推荐

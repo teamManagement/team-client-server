@@ -7,8 +7,8 @@ import (
 	"github.com/gin-gonic/gin"
 	ginmiddleware "github.com/teamManagement/gin-middleware"
 	"gorm.io/gorm"
+	"team-client-server/db"
 	"team-client-server/remoteserver"
-	"team-client-server/vos"
 )
 
 func initAppLocalStore(engine *gin.RouterGroup) {
@@ -23,7 +23,7 @@ func initAppLocalStore(engine *gin.RouterGroup) {
 var (
 	// appDataStoreSet 应用数据设置
 	appDataStoreSet ginmiddleware.ServiceFun = func(ctx *gin.Context) interface{} {
-		var setting *vos.Setting
+		var setting *db.Setting
 		if err := ctx.ShouldBindJSON(&setting); err != nil {
 			return fmt.Errorf("解析配置数据失败: %s", err.Error())
 		}
@@ -40,7 +40,7 @@ var (
 			return errors.New("要查询的key不能为空")
 		}
 
-		valueSetting := &vos.Setting{}
+		valueSetting := &db.Setting{}
 		if err := appDataStoreModel(ctx).Select("value").Where("name=?", name).First(&valueSetting).Error; err != nil {
 			if err == gorm.ErrRecordNotFound {
 				return nil
@@ -57,7 +57,7 @@ var (
 		if name == "" {
 			return errors.New("要查询的key不能为空")
 		}
-		if err := appDataStoreModel(ctx).Where("name=?", name).Delete(&vos.Setting{}).Error; err != nil {
+		if err := appDataStoreModel(ctx).Where("name=?", name).Delete(&db.Setting{}).Error; err != nil {
 			return fmt.Errorf("删除存储内容失败: %s", err.Error)
 		}
 		return nil
@@ -77,7 +77,7 @@ var (
 
 	// appDataStoreClear 数据清除
 	appDataStoreClear ginmiddleware.ServiceFun = func(ctx *gin.Context) interface{} {
-		if err := appDataStoreModel(ctx).Delete(&vos.Setting{}).Error; err != nil {
+		if err := appDataStoreModel(ctx).Delete(&db.Setting{}).Error; err != nil {
 			return fmt.Errorf("清空数据失败: %s", err.Error())
 		}
 		return nil

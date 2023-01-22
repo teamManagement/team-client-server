@@ -1,9 +1,8 @@
-package config
+package db
 
 import (
 	"github.com/byzk-worker/go-db-utils/sqlite"
 	"sync"
-	"team-client-server/vos"
 )
 
 var lock = sync.Mutex{}
@@ -16,7 +15,7 @@ func GetDbSetting(key string) (string, bool) {
 		return val, true
 	}
 
-	var dbSetting *vos.Setting
+	var dbSetting *Setting
 	if err := sqlite.Db().Model(&dbSetting).Where("key=?", key).First(&dbSetting).Error; err != nil {
 		return "", false
 	}
@@ -30,9 +29,9 @@ func SetDbSetting(key string, val string) error {
 	lock.Lock()
 	defer lock.Unlock()
 
-	setting := &vos.Setting{
+	setting := &Setting{
 		Name:  key,
-		Value: vos.EncryptValue(val),
+		Value: EncryptValue(val),
 	}
 	if err := sqlite.Db().Model(&setting).Save(setting).Error; err != nil {
 		return err

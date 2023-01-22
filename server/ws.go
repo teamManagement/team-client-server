@@ -340,7 +340,7 @@ var (
 			return err
 		}
 
-		aesKey, err := coderutils.RsaDecrypt(encAesKey, tools.ClientServerPrivateKey)
+		aesKey, err := coderutils.RsaDecrypt(encAesKey, config.ClientServerPrivateKey)
 		if err != nil {
 			return err
 		}

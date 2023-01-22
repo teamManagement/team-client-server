@@ -20,6 +20,7 @@ import (
 	"strings"
 	"sync"
 	"team-client-server/config"
+	"team-client-server/db"
 	"team-client-server/queue"
 	"team-client-server/tools"
 	"team-client-server/vos"
@@ -101,7 +102,7 @@ const (
 )
 
 func ClearAutoLoginInfo() {
-	autoLoginSetting := &vos.Setting{
+	autoLoginSetting := &db.Setting{
 		Name: autoLoginSettingKey,
 	}
 	sqlite.Db().Model(autoLoginSetting).Delete(autoLoginSetting)
@@ -109,7 +110,7 @@ func ClearAutoLoginInfo() {
 }
 
 func AutoLogin() (res bool) {
-	autoLoginSetting := &vos.Setting{
+	autoLoginSetting := &db.Setting{
 		Name: autoLoginSettingKey,
 	}
 	if err := sqlite.Db().Model(autoLoginSetting).First(&autoLoginSetting).Error; err != nil {
@@ -247,14 +248,14 @@ func Login(username, password string) (err error) {
 		return fmt.Errorf("登录消息签收失败")
 	}
 
-	sqlite.Db().Save(&vos.Setting{
+	sqlite.Db().Save(&db.Setting{
 		Name:  autoLoginSettingKey,
-		Value: vos.EncryptValue(base64.StdEncoding.EncodeToString([]byte(nowUserInfo.Username)) + "." + base64.StdEncoding.EncodeToString([]byte(password))),
+		Value: db.EncryptValue(base64.StdEncoding.EncodeToString([]byte(nowUserInfo.Username)) + "." + base64.StdEncoding.EncodeToString([]byte(password))),
 	})
 
 	loginOk = true
 
-	_ = sqlite.Db().Table("app-" + nowUserInfo.Id + "-0").AutoMigrate(&vos.Setting{})
+	_ = sqlite.Db().Table("app-" + nowUserInfo.Id + "-0").AutoMigrate(&db.Setting{})
 
 	_ = FlushAllCache()
 

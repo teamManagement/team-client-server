@@ -9,10 +9,10 @@ import (
 	"github.com/gin-gonic/gin"
 	ginmiddleware "github.com/teamManagement/gin-middleware"
 	"gorm.io/gorm"
+	"team-client-server/db"
 	"team-client-server/queue"
 	"team-client-server/remoteserver"
 	"team-client-server/sfnake"
-	"team-client-server/vos"
 	"time"
 )
 
@@ -63,7 +63,7 @@ var (
 		}
 
 		var count int64
-		if err = sqlite.Db().Model(&vos.Application{}).Where("id=? and user_id=? and status='4'", param.AppId, currentUser.Id).Count(&count).Error; err != nil {
+		if err = sqlite.Db().Model(&db.Application{}).Where("id=? and user_id=? and status='4'", param.AppId, currentUser.Id).Count(&count).Error; err != nil {
 			return fmt.Errorf("查询用户与应用关系失败: %w", err)
 		}
 
@@ -83,7 +83,7 @@ var (
 			return fmt.Errorf("序列化消息内容失败: %s", err.Error())
 		}
 
-		channelMsgAckInfo := &vos.QueueChannelMsgInfo{
+		channelMsgAckInfo := &db.QueueChannelMsgInfo{
 			Content:  base64.StdEncoding.EncodeToString(contentMarshal),
 			Ack:      false,
 			SendTime: time.Now().UnixNano(),
