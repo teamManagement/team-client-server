@@ -23,6 +23,9 @@ func Run() {
 	db.InitDb()
 
 	engine := gin.New()
+	if !config.IsDebug() {
+		gin.SetMode(gin.ReleaseMode)
+	}
 
 	initProxyLocal443Config()
 	ginmiddleware.UseNotFoundHandle(engine)

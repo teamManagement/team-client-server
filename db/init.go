@@ -16,8 +16,8 @@ func InitDb() {
 	config.AddWatchAndNowExec(configChange)
 }
 
-func configChange(config *config.Info) {
-	dbPath := config.Database.Path
+func configChange(configInfo *config.Info) {
+	dbPath := configInfo.Database.Path
 	if dbFilePath == dbPath {
 		return
 	}
@@ -31,7 +31,9 @@ func configChange(config *config.Info) {
 		os.Exit(9)
 	}
 
-	sqlite.EnableDebug()
+	if config.IsDebug() {
+		sqlite.EnableDebug()
+	}
 
 	initDataTable()
 }

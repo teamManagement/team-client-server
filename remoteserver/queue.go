@@ -1,13 +1,12 @@
 package remoteserver
 
 import (
-	"encoding/base64"
-	"github.com/byzk-worker/go-db-utils/sqlite"
-	"github.com/go-base-lib/coderutils"
+	"fmt"
+	"github.com/go-base-lib/goextension"
 	"github.com/nsqio/go-nsq"
-	"gorm.io/gorm"
+	"github.com/rabbitmq/amqp091-go"
 	"sync"
-	"team-client-server/db"
+	"team-client-server/queue"
 	"time"
 )
 
@@ -18,51 +17,52 @@ var (
 	requeueDelay   = 5 * time.Second
 )
 
-var queueHandler nsq.HandlerFunc = func(message *nsq.Message) error {
-	var queueChannelMsgInfo *db.QueueChannelMsgInfo
-
-	msgId := string(message.ID[:])
-	queueLock.Lock()
-	defer queueLock.Unlock()
-	queueChannelMsgInfoModal := sqlite.Db().Model(&db.QueueChannelMsgInfo{})
-
-	if err := queueChannelMsgInfoModal.Where("id=? and queue_type=?", msgId, db.QueueTypeReceive).First(&queueChannelMsgInfo).Error; err != nil && err != gorm.ErrRecordNotFound {
-		message.Requeue(requeueDelay)
-		return nil
-	}
-
-	if queueChannelMsgInfo.Id != "" {
-		if !queueChannelMsgInfo.Ack {
-			message.Requeue(requeueDelay)
-		}
-		return nil
-	}
-
-	transferMsgBody, err := coderutils.Sm4Decrypt(teamworkSm4Key, message.Body)
-	if err != nil {
-		return nil
-	}
-
-	if transferMsgBody, err = base64.StdEncoding.DecodeString(string(transferMsgBody)); err != nil {
-		return nil
-	}
-
-	pos := len(transferMsgBody) - 16
-	sm4RandomKey := transferMsgBody[pos:]
-	transferMsgBody = transferMsgBody[:pos]
-
-	if transferMsgBody, err = coderutils.Sm4Decrypt(sm4RandomKey, transferMsgBody); err != nil {
-		message.Finish()
-		return nil
-	}
-
-	queueMsgMap[msgId] = message
-
-	sendTcpTransfer(&TcpTransferInfo{
-		CmdCode: TcpTransferCmdCodeQueue,
-		Data:    transferMsgBody,
-	})
-
-	return nil
+var queueHandler queue.MsgHandler = func(data goextension.Bytes, delivery amqp091.Delivery) {
+	fmt.Println(data.ToString())
+	//var queueChannelMsgInfo *db.QueueChannelMsgInfo
+	//
+	//msgId := string(message.ID[:])
+	//queueLock.Lock()
+	//defer queueLock.Unlock()
+	//queueChannelMsgInfoModal := sqlite.Db().Model(&db.QueueChannelMsgInfo{})
+	//
+	//if err := queueChannelMsgInfoModal.Where("id=? and queue_type=?", msgId, db.QueueTypeReceive).First(&queueChannelMsgInfo).Error; err != nil && err != gorm.ErrRecordNotFound {
+	//	message.Requeue(requeueDelay)
+	//	return nil
+	//}
+	//
+	//if queueChannelMsgInfo.Id != "" {
+	//	if !queueChannelMsgInfo.Ack {
+	//		message.Requeue(requeueDelay)
+	//	}
+	//	return nil
+	//}
+	//
+	//transferMsgBody, err := coderutils.Sm4Decrypt(teamworkSm4Key, message.Body)
+	//if err != nil {
+	//	return nil
+	//}
+	//
+	//if transferMsgBody, err = base64.StdEncoding.DecodeString(string(transferMsgBody)); err != nil {
+	//	return nil
+	//}
+	//
+	//pos := len(transferMsgBody) - 16
+	//sm4RandomKey := transferMsgBody[pos:]
+	//transferMsgBody = transferMsgBody[:pos]
+	//
+	//if transferMsgBody, err = coderutils.Sm4Decrypt(sm4RandomKey, transferMsgBody); err != nil {
+	//	message.Finish()
+	//	return nil
+	//}
+	//
+	//queueMsgMap[msgId] = message
+	//
+	//sendTcpTransfer(&TcpTransferInfo{
+	//	CmdCode: TcpTransferCmdCodeQueue,
+	//	Data:    transferMsgBody,
+	//})
+	//
+	//return nil
 
 }

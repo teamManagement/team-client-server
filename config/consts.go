@@ -1,6 +1,6 @@
 package config
 
-var serverDomain string
+var TeamworkSm4Key = []byte("teamwork queue message transfer fixed key!!!")[:16]
 
 var (
 	localWebServerAddress = "https://" + serverDomain
@@ -13,4 +13,8 @@ func LocalWebServerAddress() string {
 
 func LocalWSServerAddress() string {
 	return localWSServerAddress
+}
+
+func IsDebug() bool {
+	return debug
 }

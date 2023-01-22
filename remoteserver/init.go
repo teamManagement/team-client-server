@@ -14,7 +14,9 @@ import (
 	"github.com/go-base-lib/logs"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/nsqio/go-nsq"
+	"github.com/panjf2000/ants/v2"
 	"github.com/teamManagement/common/conn"
+	"golang.org/x/net/context"
 	"net"
 	"strconv"
 	"strings"
@@ -267,9 +269,33 @@ func Login(username, password string) (err error) {
 		return err
 	}
 
-	//if err = queue.StartListenerQueue(nowUserInfo.Id, nowUserInfo.LoginIp, config.nsqdLookupAddress, queueHandler); err != nil {
-	//	return err
-	//}
+	if nowUserInfo.QueueConfig == nil {
+		return errors.New("获取队列配置失败")
+	}
+
+	if err = queue.StartListenerQueue(nowUserInfo.Id, password, nowUserInfo.QueueConfig.Address, nowUserInfo.QueueConfig.VirtualHost); err != nil {
+		return err
+	}
+
+	ctx, cancelFunc := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancelFunc()
+
+	queueListenNotice := make(chan error)
+	_ = ants.Submit(func() {
+		queue.ListenQueue("chat_user_"+nowUserInfo.Id, nil, queueHandler, queueListenNotice)
+	})
+
+	select {
+	case err = <-queueListenNotice:
+		if err != nil {
+			return err
+		}
+		break
+	case <-ctx.Done():
+		return errors.New("连接用户消息队列通道超时, 请检查本地网络环境")
+	}
+
+	//queueHandler()
 
 	connCloseCh = make(chan struct{}, 1)
 	go userConnHandler(connWrapper, dial)
@@ -517,6 +543,7 @@ func Logout() {
 	logs.Debugln("TCP服务通道成功返回关闭成功")
 
 	connCloseCh = nil
+	queue.StopListenerQueue()
 }
 
 func LoginOk() bool {

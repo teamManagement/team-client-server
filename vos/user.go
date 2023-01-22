@@ -150,6 +150,14 @@ type UserOrgWrapperInfo struct {
 	IsMain bool          `json:"isMain,omitempty" json:"isMain,omitempty"`
 }
 
+// UserQueueConfig 用户队列配置信息
+type UserQueueConfig struct {
+	// Address 连接地址
+	Address string `json:"address,omitempty"`
+	// VirtualHost 虚拟主机
+	VirtualHost string `json:"virtualHost,omitempty"`
+}
+
 // UserInfo 用户信息
 type UserInfo struct {
 	// Id 用户id
@@ -220,4 +228,6 @@ type UserInfo struct {
 	IsAppStoreManager bool `json:"isAppStoreManager,omitempty" gorm:"-"`
 	// LoginIp 用户登录的IP
 	LoginIp string `json:"loginIp,omitempty" gorm:"-"`
+	// QueueConfig 队列信息配置
+	QueueConfig *UserQueueConfig `json:"queueConfig,omitempty" gorm:"-"`
 }
