@@ -11,6 +11,8 @@ import (
 	"time"
 )
 
+const userQueuePasswordSlat = "~~~~ %teamwork toolbox queue key%.. ~~~~"
+
 var (
 	consumerConnection *Connection
 	lock               sync.Mutex
@@ -22,7 +24,7 @@ func StartListenerQueue(userId, userPassword, address, vHost string) error {
 
 	userId = "u_" + userId
 
-	if targetPassword, err := coderutils.Hash(sm3.New(), []byte(userPassword)); err != nil {
+	if targetPassword, err := coderutils.Hash(sm3.New(), []byte(userPassword+"_"+userQueuePasswordSlat)); err != nil {
 		logs.Errorf("转换用户的队列密钥失败: %s", err.Error())
 		return errors.New("转换队列密钥失败")
 	} else {

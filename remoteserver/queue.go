@@ -1,11 +1,11 @@
 package remoteserver
 
 import (
-	"fmt"
-	"github.com/go-base-lib/goextension"
+	"github.com/byzk-worker/go-db-utils/sqlite"
 	"github.com/nsqio/go-nsq"
 	"github.com/rabbitmq/amqp091-go"
 	"sync"
+	"team-client-server/db"
 	"team-client-server/queue"
 	"time"
 )
@@ -17,8 +17,44 @@ var (
 	requeueDelay   = 5 * time.Second
 )
 
-var queueHandler queue.MsgHandler = func(data goextension.Bytes, delivery amqp091.Delivery) {
-	fmt.Println(data.ToString())
+var queueHandler queue.MsgHandler = func(data *queue.MsgInfoWrapper, delivery amqp091.Delivery) {
+	queueLock.Lock()
+	defer queueLock.Unlock()
+
+	msgInfo := data.Info
+
+	if msgInfo.Type == queue.MsgTypeChatPutConfirm || msgInfo.Type == queue.MsgTypeChatSendOut {
+		var userChatMsg *db.UserChatMsg
+		if err := msgInfo.BindContent(&userChatMsg); err != nil {
+			_ = queue.Nack(delivery.DeliveryTag, false)
+			return
+		}
+
+		if userChatMsg.ClientUniqueId == "" || userChatMsg.Id == "" ||
+			userChatMsg.TargetId == "" || userChatMsg.SourceId == "" ||
+			userChatMsg.ChatType <= db.ChatUnknown || userChatMsg.ChatType > db.ChatTypeApp ||
+			userChatMsg.MsgType < db.ChatMsgTypeText || userChatMsg.MsgType > db.ChatMsgTypeImg {
+			_ = queue.Nack(delivery.DeliveryTag, false)
+			return
+		}
+
+		userChatMsg.Status = "ok"
+		if err := sqlite.Db().Model(&db.UserChatMsg{}).Where("client_unique_id=?", userChatMsg.ClientUniqueId).Save(userChatMsg).Error; err != nil {
+			_ = queue.Nack(delivery.DeliveryTag, false)
+			return
+		}
+
+	} else {
+		_ = queue.Nack(delivery.DeliveryTag, false)
+		return
+	}
+
+	_ = queue.Ack(delivery.DeliveryTag)
+
+	sendTcpTransfer(&TcpTransferInfo{
+		CmdCode: TcpTransferCmdCodeQueue,
+		Data:    data.RawData,
+	})
 	//var queueChannelMsgInfo *db.QueueChannelMsgInfo
 	//
 	//msgId := string(message.ID[:])
@@ -59,7 +95,7 @@ var queueHandler queue.MsgHandler = func(data goextension.Bytes, delivery amqp09
 	//queueMsgMap[msgId] = message
 	//
 	//sendTcpTransfer(&TcpTransferInfo{
-	//	CmdCode: TcpTransferCmdCodeQueue,
+	//	CmdCode: TcpTransferCmdCodeQueue,ju89
 	//	Data:    transferMsgBody,
 	//})
 	//

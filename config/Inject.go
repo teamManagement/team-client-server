@@ -6,5 +6,5 @@ var (
 	// team-client-server/config.serverDomain
 	serverDomain string
 	// team-client-server/config.debug
-	debug bool
+	debug string
 )

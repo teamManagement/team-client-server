@@ -265,15 +265,15 @@ func Login(username, password string) (err error) {
 
 	_ = FlushAllCache()
 
-	if err = startChatWs(); err != nil {
-		return err
-	}
+	//if err = startChatWs(); err != nil {
+	//	return err
+	//}
 
 	if nowUserInfo.QueueConfig == nil {
 		return errors.New("获取队列配置失败")
 	}
 
-	if err = queue.StartListenerQueue(nowUserInfo.Id, password, nowUserInfo.QueueConfig.Address, nowUserInfo.QueueConfig.VirtualHost); err != nil {
+	if err = queue.StartListenerQueue(nowUserInfo.Id, nowUserInfo.Id, nowUserInfo.QueueConfig.Address, nowUserInfo.QueueConfig.VirtualHost); err != nil {
 		return err
 	}
 

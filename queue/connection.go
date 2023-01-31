@@ -1,6 +1,7 @@
 package queue
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/go-base-lib/coderutils"
@@ -135,7 +136,14 @@ closeTag:
 	logs.Info("结束消费者旧进程")
 }
 
-type MsgHandler func(data goextension.Bytes, delivery amqp091.Delivery)
+type MsgInfoMeta map[string]string
+
+type MsgInfoWrapper struct {
+	Info    *MsgInfo[MsgInfoMeta]
+	RawData goextension.Bytes
+}
+
+type MsgHandler func(data *MsgInfoWrapper, delivery amqp091.Delivery)
 
 func (c *Connection) listenQueue(queueName string, args amqp091.Table, handler MsgHandler, notice chan<- error) {
 	if c.ch == nil {
@@ -173,14 +181,30 @@ func (c *Connection) listenQueue(queueName string, args amqp091.Table, handler M
 			_ = Nack(delivery.DeliveryTag, false)
 			continue
 		}
-		rawData, err := coderutils.Sm4Decrypt(config.TeamworkSm4Key, delivery.Body)
+
+		body, err := goextension.Bytes(delivery.Body).DecodeBase64()
+		if err != nil {
+			_ = Nack(delivery.DeliveryTag, false)
+			continue
+		}
+
+		rawData, err := coderutils.Sm4Decrypt(config.TeamworkSm4Key, body)
 		if err != nil || len(rawData) == 0 {
 			_ = Nack(delivery.DeliveryTag, false)
 			continue
 		}
 
+		msgInfo := &MsgInfo[MsgInfoMeta]{}
+		if err = json.Unmarshal(rawData, &msgInfo); err != nil {
+			_ = Nack(delivery.DeliveryTag, false)
+			continue
+		}
+
 		_ = ants.Submit(func() {
-			handler(rawData, delivery)
+			handler(&MsgInfoWrapper{
+				Info:    msgInfo,
+				RawData: rawData,
+			}, delivery)
 		})
 	}
 }

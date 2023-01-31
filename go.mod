@@ -25,8 +25,9 @@ require (
 	github.com/stretchr/testify v1.8.1
 	github.com/teamManagement/common v0.0.0-20221007164500-9e280480e36e
 	github.com/teamManagement/gin-middleware v0.0.0-20221006104450-68779ede5a7e
-	golang.org/x/net v0.0.0-20220722155237-a158d28d115b
-	golang.org/x/sys v0.0.0-20220722155257-8c9f86f7a55f
+	github.com/tjfoc/gmsm v1.4.1
+	golang.org/x/net v0.5.0
+	golang.org/x/sys v0.4.0
 	gorm.io/gorm v1.24.1
 )
 
@@ -63,10 +64,9 @@ require (
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/subosito/gotenv v1.3.0 // indirect
-	github.com/tjfoc/gmsm v1.4.1 // indirect
 	github.com/ugorji/go/codec v1.2.7 // indirect
 	golang.org/x/crypto v0.0.0-20220722155217-630584e8d5aa // indirect
-	golang.org/x/text v0.3.7 // indirect
+	golang.org/x/text v0.6.0 // indirect
 	google.golang.org/protobuf v1.28.0 // indirect
 	gopkg.in/ini.v1 v1.66.4 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect

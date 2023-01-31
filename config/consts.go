@@ -16,5 +16,5 @@ func LocalWSServerAddress() string {
 }
 
 func IsDebug() bool {
-	return debug
+	return debug == "1"
 }
