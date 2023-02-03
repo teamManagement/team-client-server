@@ -502,3 +502,18 @@ export const removeBase64Prefix = (base64Str: string) => {
     }
     return base64Str = base64Str.substring(base64Str.indexOf(',') + 1);
 }
+
+/**
+ * 删除对象数组中为空的数据
+ * @param obj 
+ * @returns 
+ */
+
+export const delEmptyQueryNodes = (obj: any) => {
+    Object.keys(obj).forEach((key: any) => {
+      let value = obj[key];
+      value && typeof value === 'object' && delEmptyQueryNodes(value);
+      (value === '' || value === null || value === undefined || value.length === 0 || Object.keys(value).length === 0) && delete obj[key];
+    });
+    return obj;
+  }

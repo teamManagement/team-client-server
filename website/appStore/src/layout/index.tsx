@@ -79,6 +79,7 @@ export default function LayoutView(): React.ReactNode {
               { id: '456789', name: '/manage/types', title: '类别管理', icon: 'icon-yingyong', sort: 1 },
               { id: '456123', name: '/manage/apps', title: '应用管理', icon: 'icon-yingyong', sort: 1 },
               { id: '456321', name: '/manage/userMgr', title: '管理员列表', icon: 'icon-yingyong', sort: 1 },
+              { id: '4543635421', name: '/manage/clientMan', title: '客户端管理', icon: 'icon-yingyong', sort: 1 },
             ]
           }
           sessionStorage.setItem(
@@ -154,7 +155,7 @@ export default function LayoutView(): React.ReactNode {
   const getUserInfo = useCallback(async () => {
     try {
       const users = await api.proxyHttpLocalServer<UserInfo>('/user/now')
-      if (users.id !== '0') {
+      if (users.isAppStoreManager === false) {
         setMenuItems([])
       }
       setUserInfo(users)

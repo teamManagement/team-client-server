@@ -27,6 +27,22 @@ export async function apiPostRequest(params: IHttpReq): Promise<any> {
   }
 }
 
+export async function apiLocalRequest(params: IHttpReq): Promise<any> {
+  if (!params) {
+    return Promise.reject('请求参数不能为空！')
+  }
+  try {
+    const rst = await api.proxyHttpLocalServer(params.url, { jsonData: params.data, timeout: -1 })
+    return Promise.resolve(rst)
+  } catch (e: any) {
+    Modal.error({ title: e.message, okText: '知道了' });
+    params.errorCb?.(e.message);
+    return
+  } finally {
+    params.finalCb?.()
+  }
+}
+
 /**
  * 获取机构列表
  */
@@ -144,4 +160,44 @@ export async function getAppTypeList(appId: any): Promise<any> {
 */
 export async function getAppUserList(appId: any): Promise<any> {
   return await apiPostRequest({ url: `/user/get/${appId}` })
+}
+
+
+
+//TODO 管理
+
+/**
+ * 管理员新增
+ */
+export async function addManageUsers(userId: any): Promise<any> {
+  return await apiLocalRequest({ url: `/services/appstore/manager/add/${userId}` })
+}
+
+/**
+ * 管理员删除
+ */
+export async function delManageUsers(userId: any): Promise<any> {
+  return await apiLocalRequest({ url: `/services/appstore/manager/del/${userId}` })
+}
+
+/**
+ * 管理员列表查询
+ */
+export async function reqManList(): Promise<any> {
+  return await apiPostRequest({ url: `/appstore/manager/list` })
+}
+
+
+/**
+ * 客户端版本列表查询
+ */
+export async function clientList(): Promise<any> {
+  return await apiPostRequest({ url: `` })
+}
+
+/**
+ * 客户端版本新增
+ */
+export async function addClientVersion(data: any): Promise<any> {
+  return await apiLocalRequest({ url: ``, data })
 }

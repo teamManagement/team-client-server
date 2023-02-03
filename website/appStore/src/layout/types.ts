@@ -73,5 +73,10 @@ export interface UserInfo {
    * 头像
    */
   icon: string
+
+  /**
+   * 是否为管理员
+   */
+  isAppStoreManager:boolean
 }
 

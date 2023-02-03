@@ -25,7 +25,9 @@ const Detail: React.FC<IDeatilProps> = ({ fns, finished, instalList }) => {
   useEffect(() => {
     fns.current = {
       show(info: any) {
+        if (!info) { return }
         setVisible(true)
+
         setAppInfo(info)
         console.log(info);
 
@@ -113,14 +115,16 @@ const Detail: React.FC<IDeatilProps> = ({ fns, finished, instalList }) => {
                 <List
                   itemLayout="horizontal"
                   dataSource={[
-                    { title: appInfo?.authorInfo?.id === '0' ? 'teamwork(平台)' : '', desc: appInfo?.authorInfo.orgList[0].org.name },
+                    // { title: appInfo ? 'teamwork(平台)' : '', desc: appInfo && appInfo?.authorInfo?.orgList[0].org.name },
+                    { title: 'teamwork(平台)', desc: '超管' },
                   ]}
                   renderItem={item => (
                     <List.Item>
                       <List.Item.Meta
                         avatar={<div className='personStyle'>{item.title.slice(item.title.length - 3, item.title.length - 1)}</div>}
                         title={<a>{item.title}</a>}
-                        description={appInfo?.authorInfo?.id === '0' ? '平台内置' : '辅助开发人员'}
+                        // description={appInfo && appInfo?.authorInfo?.id === '0' ? '平台内置' : '辅助开发人员'}
+                        description={'平台内置'}
                       />
                     </List.Item>
                   )}

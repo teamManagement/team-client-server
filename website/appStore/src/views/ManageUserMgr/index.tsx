@@ -2,8 +2,10 @@
 /* eslint-disable jsx-a11y/anchor-has-content */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { useState, useCallback, useEffect, useRef } from 'react'
-import { Button, Form, Input, Popconfirm, Table } from 'antd'
+import { Button, Form, Input, message, Popconfirm, Table } from 'antd'
 import AddManageUserModal, { AddManageUserModalActionType } from './AddManageUserModal';
+import { delManageUsers, reqManList } from '../../serve';
+import { current } from '@byzk/teamwork-sdk';
 
 
 const ManageUserMgr: React.FC = () => {
@@ -13,9 +15,18 @@ const ManageUserMgr: React.FC = () => {
     const [pageSize, setPageSize] = useState<number>(10);
     const [total, setTotal] = useState<number>(0);
     const [data, setData] = useState<any[]>([]);
+    const loginId = useRef<string>()
 
     const [formRef] = Form.useForm();
     const addUserRef = useRef<AddManageUserModalActionType>();
+
+    const geFirst = useCallback(() => {
+        loginId.current = current.userInfo.id
+    }, [])
+
+    useEffect(() => {
+        geFirst()
+    }, [geFirst])
 
     const fetchData = useCallback(async (sPage?: number, sPageSize?: number) => {
         const page = sPage || 1;
@@ -24,9 +35,10 @@ const ManageUserMgr: React.FC = () => {
         var payload = { page, pageSize, ...searchItems };
         setFetchLoading(true);
         //todo
-
+        const list = await reqManList()
+        console.log(list);
         setFetchLoading(false);
-        setData([{ name: '啊哈哈哈' }]);
+        setData(list);
         setPage(page);
         setPageSize(pageSize);
         setTotal(1);
@@ -40,6 +52,10 @@ const ManageUserMgr: React.FC = () => {
         fetchData();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
+
+
+    console.log(loginId.current);
+
 
     return <div>
         <div style={{ marginBottom: 12, display: 'flex' }} >
@@ -69,15 +85,15 @@ const ManageUserMgr: React.FC = () => {
                 },
                 {
                     title: '姓名', dataIndex: 'name',
-                    render: (t, r, i) => t ?? '-'
+                    render: (t, r, i) => r.user.name ?? '-'
                 },
                 {
                     title: '所在部门', dataIndex: 'department',
-                    render: (t, r, i) => t ?? '-'
+                    render: (t, r, i) => r.user.nowOrgInfo.org.name ?? '-'
                 },
                 {
                     title: '联系电话', dataIndex: 'phone',
-                    render: (t, r, i) => t ?? '-'
+                    render: (t, r, i) => r.user.phone ?? '-'
                 },
                 {
                     title: '备注', dataIndex: 'remark',
@@ -86,9 +102,12 @@ const ManageUserMgr: React.FC = () => {
                 {
                     title: '操作',
                     render: (t, r, i) => <div>
-                        <Popconfirm title='确认要删除吗?' onConfirm={() => { }} >
-                            <a style={{ color: 'red' }} >删除</a>
-                        </Popconfirm>
+                        {loginId.current && loginId.current !== r.userId && <Popconfirm title='确认要删除吗?' onConfirm={async () => {
+                            await delManageUsers(r.userId)
+                            message.success('删除成功！')
+                        }} >
+                            <Button type='link' danger>删除</Button>
+                        </Popconfirm>}
                     </div>
                 }
             ]}

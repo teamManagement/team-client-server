@@ -1,5 +1,7 @@
 import { Modal, Row, Col, Select } from 'antd';
 import { forwardRef, useImperativeHandle, useCallback, useState } from 'react'
+import { addManageUsers } from '../../serve';
+import { remoteCache } from '@byzk/teamwork-inside-sdk'
 
 export interface AddManageUserModalActionType {
     show: () => void;
@@ -19,16 +21,24 @@ const AddManageUserModal = forwardRef((props: IProps, ref) => {
     const [selected, setSelected] = useState<any>();
     const [submitLoading, setSubmitLoading] = useState<boolean>(false);
 
-    const fetchData = useCallback(() => {
+    const fetchData = useCallback(async () => {
         setLoading(true);
 
-        //todo
+        //todo 查询人员列表
+        const list = await remoteCache.userList({ breakAppStoreManager: true })
+        console.log(list);
+        const newList = list && list.map((m: any) => {
+            return {
+                label: m.name,
+                value: m.id,
+            }
+        })
 
         setLoading(false);
-        setData([
-            { id: 1, name: '程亮', department: '电子签章业务部' },
-            { id: 2, name: '张三', department: '测试部门' },
-        ]);
+
+        console.log(list);
+
+        setData(list && list);
     }, []);
 
     const show = useCallback(() => {
@@ -43,13 +53,14 @@ const AddManageUserModal = forwardRef((props: IProps, ref) => {
 
     useImperativeHandle(ref, () => ({ show, hide }), [show, hide]);
 
-    const onComfirm = useCallback(() => {
+    const onComfirm = useCallback(async () => {
         if (!selected) {
             Modal.error({ title: '请选择人员' });
             return;
         }
         setSubmitLoading(true);
-        //todo
+        //todo 新增管理员
+        await addManageUsers(selected)
         setSubmitLoading(false);
         hide();
         props.onCompleted?.();
@@ -57,7 +68,9 @@ const AddManageUserModal = forwardRef((props: IProps, ref) => {
 
 
 
-    return <Modal title='新增管理员' maskClosable={false} open={visible} onCancel={() => hide()} onOk={() => onComfirm()} okButtonProps={{ loading: submitLoading }} >
+    return <Modal title='新增管理员'
+        destroyOnClose
+        maskClosable={false} open={visible} onCancel={() => hide()} onOk={() => onComfirm()} okButtonProps={{ loading: submitLoading }} >
         <Row>
             <Col span={6} style={{ textAlign: 'right' }} >选择人员:</Col>
             <Col offset={1} style={{ marginBottom: 20 }}  >
@@ -68,7 +81,7 @@ const AddManageUserModal = forwardRef((props: IProps, ref) => {
                     style={{ width: 250, marginTop: -5 }}
                     value={selected}
                     onChange={(e) => setSelected(e)}
-                    options={(data || []).map((m) => { return { label: `${m.name}-${m.department}`, value: m.id } })}
+                    options={(data || []).map((m) => { return { label: `${m.name}-${m.nowOrgInfo.org.name}`, value: m.id } })}
                     filterOption={(input, option) => {
                         return (option?.label ?? '').includes(input)
                     }}
