@@ -1,6 +1,7 @@
 package server
 
 import (
+	"errors"
 	"github.com/gin-gonic/gin"
 	ginmiddleware "github.com/teamManagement/gin-middleware"
 	"os/exec"
@@ -13,6 +14,7 @@ func initLocalService(engine *gin.Engine) {
 	{
 		engine.Group("/user").
 			POST("/now", ginmiddleware.WrapperResponseHandle(userNowInfo)).
+			POST("/now/token", ginmiddleware.WrapperResponseHandle(userNowToken)).
 			POST("/cache/p", ginmiddleware.WrapperResponseHandle(userNowCachePasswd)).
 			POST("/status", ginmiddleware.WrapperResponseHandle(userNowStatus))
 	}
@@ -25,6 +27,13 @@ func initLocalService(engine *gin.Engine) {
 }
 
 var (
+	userNowToken ginmiddleware.ServiceFun = func(ctx *gin.Context) interface{} {
+		token := remoteserver.Token()
+		if token == "" {
+			return errors.New("用户未登录")
+		}
+		return token
+	}
 	userNowInfo ginmiddleware.ServiceFun = func(ctx *gin.Context) interface{} {
 		nowUserInfo, err := remoteserver.NowUser()
 		if err != nil {

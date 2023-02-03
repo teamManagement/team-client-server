@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"team-client-server/config"
 	"team-client-server/remoteserver"
 	"team-client-server/tools"
 	"time"
@@ -126,7 +127,12 @@ func (s *SocketWrapper) checkRemoteServerLoop() {
 				close(s.closeRemoteServerRestoreCh)
 				return
 			case <-restoreTime:
-				if !tools.TelnetHost(remoteserver.ServerAddress) {
+				tcpServerAddress, err := remoteserver.GetServerTcpAddress()
+				if err != nil {
+					continue
+				}
+
+				if !tools.TelnetHost(tcpServerAddress) {
 					continue
 				}
 
@@ -339,7 +345,7 @@ var (
 			return err
 		}
 
-		aesKey, err := coderutils.RsaDecrypt(encAesKey, tools.ClientServerPrivateKey)
+		aesKey, err := coderutils.RsaDecrypt(encAesKey, config.ClientServerPrivateKey)
 		if err != nil {
 			return err
 		}

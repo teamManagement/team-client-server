@@ -15,8 +15,9 @@ import (
 	"net/url"
 	"strings"
 	"sync"
+	"team-client-server/config"
+	"team-client-server/db"
 	"team-client-server/tools"
-	"team-client-server/vos"
 )
 
 var lock = sync.Mutex{}
@@ -59,12 +60,12 @@ var (
 )
 
 func initProxyLocal443Config() {
-	proxy443Keypair, proxy443KeypairLoadErr = tls.X509KeyPair(tools.Proxy443CertBytes, tools.Proxy443KeyBytes)
+	proxy443Keypair, proxy443KeypairLoadErr = tls.X509KeyPair(config.Proxy443CertBytes, config.Proxy443KeyBytes)
 	uri, _ := url.Parse("https://127.0.0.1:65528")
 	proxy443ToLockHttpProxy = httputil.NewSingleHostReverseProxy(uri)
 	proxy443ToLockHttpProxy.Transport = tools.TlsTransport
 
-	block, _ := pem.Decode(tools.Proxy443CertBytes)
+	block, _ := pem.Decode(config.Proxy443CertBytes)
 	if block == nil {
 		proxy443KeypairLoadErr = errors.New("转换443代理客户端证书编码格式失败")
 		return
@@ -84,12 +85,12 @@ func initProxyLocal443Config() {
 		proxy443AllowServerName[name] = struct{}{}
 	}
 
-	proxy443Setting := &vos.Setting{}
-	settingModal := sqlite.Db().Model(&vos.Setting{})
+	proxy443Setting := &db.Setting{}
+	settingModal := sqlite.Db().Model(&db.Setting{})
 	settingModal.Where("name='proxyLocal443'").First(&proxy443Setting)
-	if proxy443Setting.Value == vos.EncryptValue('1') {
+	if proxy443Setting.Value == db.EncryptValue('1') {
 		if err = proxyLocal443Start(); err != nil {
-			settingModal.Save(&vos.Setting{
+			settingModal.Save(&db.Setting{
 				Name:  "proxyLocal443",
 				Value: "0",
 			})
@@ -128,7 +129,7 @@ var (
 		}
 
 		return sqlite.Db().Transaction(func(tx *gorm.DB) error {
-			sqlite.Db().Model(&vos.Setting{}).Save(&vos.Setting{Name: "proxyLocal443", Value: "1"})
+			sqlite.Db().Model(&db.Setting{}).Save(&db.Setting{Name: "proxyLocal443", Value: "1"})
 			proxy443IsRunning = false
 			if proxy443HttpServer == nil {
 				return nil
@@ -149,7 +150,7 @@ func proxyLocal443Start() error {
 	}
 
 	return sqlite.Db().Transaction(func(tx *gorm.DB) error {
-		tx.Model(&vos.Setting{}).Save(&vos.Setting{Name: "proxyLocal443", Value: "1"})
+		tx.Model(&db.Setting{}).Save(&db.Setting{Name: "proxyLocal443", Value: "1"})
 
 		if proxy443KeypairLoadErr != nil {
 			return fmt.Errorf("加载TLS密钥对失败: %s", proxy443KeypairLoadErr.Error())

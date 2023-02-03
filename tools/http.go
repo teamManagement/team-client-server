@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"team-client-server/config"
 	"time"
 )
 
@@ -143,9 +144,9 @@ func HttpRequestWithOption(url string, option *HttpRequestOption) (*HttpRequestW
 func GenerateTLSConfig() *tls.Config {
 
 	caCertPool := x509.NewCertPool()
-	caCertPool.AppendCertsFromPEM(CaCertBytes)
+	caCertPool.AppendCertsFromPEM(config.CaCertBytes)
 
-	tlsCert, err := tls.X509KeyPair(ClientCertBytes, ClientKeyBytes)
+	tlsCert, err := tls.X509KeyPair(config.ClientCertBytes, config.ClientKeyBytes)
 	if err != nil {
 		panic(err)
 	}
@@ -153,7 +154,7 @@ func GenerateTLSConfig() *tls.Config {
 		Certificates: []tls.Certificate{tlsCert},
 		ClientCAs:    caCertPool,
 		//ClientAuth:         tls.RequireAndVerifyClientCert,
-		InsecureSkipVerify: true,
+		InsecureSkipVerify: config.InsecureSkipVerify,
 		//CipherSuites: []uint16{
 		//	tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
 		//	tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
@@ -178,7 +179,5 @@ var TlsTransport = &http.Transport{
 var DefaultHttpClient = &http.Client{Transport: TlsTransport}
 
 var SkipVerifyCertHttpClient = &http.Client{Transport: &http.Transport{
-	TLSClientConfig: &tls.Config{
-		InsecureSkipVerify: true,
-	},
+	TLSClientConfig: config.HttpsTlsConfig,
 }}

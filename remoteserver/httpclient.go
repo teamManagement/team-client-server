@@ -5,6 +5,7 @@ import (
 	"fmt"
 	ginmiddleware "github.com/teamManagement/gin-middleware"
 	"strings"
+	"team-client-server/config"
 	"team-client-server/tools"
 )
 
@@ -12,12 +13,13 @@ func RequestWebService(url string) error {
 	return RequestWebServiceWithData(url, nil, nil)
 }
 
-func RequestWebServiceWithData(url string, data any, res any) error {
+func RequestWebServiceToRawReq(url string, data any) (*tools.HttpRequestWrapper, error) {
 	option := &tools.HttpRequestOption{
 		Method:   "POST",
 		JsonData: data,
 		Header: map[string]string{
 			"_t":         Token(),
+			"_a":         LoginIp(),
 			"User-Agent": "teamManageLocal",
 		},
 	}
@@ -26,7 +28,27 @@ func RequestWebServiceWithData(url string, data any, res any) error {
 		url = "/" + url
 	}
 
-	url = LocalWebServerAddress + url
+	url = config.LocalWebServerAddress() + url
+
+	return tools.HttpRequestWithOption(url, option)
+}
+
+func RequestWebServiceWithData(url string, data any, res any) error {
+	option := &tools.HttpRequestOption{
+		Method:   "POST",
+		JsonData: data,
+		Header: map[string]string{
+			"_t":         Token(),
+			"_a":         LoginIp(),
+			"User-Agent": "teamManageLocal",
+		},
+	}
+
+	if !strings.HasPrefix(url, "/") {
+		url = "/" + url
+	}
+
+	url = config.LocalWebServerAddress() + url
 
 	req, err := tools.HttpRequestWithOption(url, option)
 	if err != nil {
@@ -45,6 +67,10 @@ func RequestWebServiceWithData(url string, data any, res any) error {
 
 	if httpResult.Error {
 		return fmt.Errorf("%s: %s", httpResult.Code, httpResult.Msg)
+	}
+
+	if res == nil {
+		return err
 	}
 
 	marshal, err := json.Marshal(httpResult.Result)

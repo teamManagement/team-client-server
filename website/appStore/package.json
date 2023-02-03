@@ -5,6 +5,8 @@
   "dependencies": {
     "@ant-design/pro-table": "^2.76.4",
     "@craco/craco": "^6.4.5",
+    "@teamworktoolbox/inside-sdk": "^0.1.4",
+    "@teamworktoolbox/sdk": "^0.1.4",
     "@testing-library/jest-dom": "^5.14.1",
     "@testing-library/react": "^13.0.0",
     "@testing-library/user-event": "^13.2.1",

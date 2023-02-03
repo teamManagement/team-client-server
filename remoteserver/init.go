@@ -13,11 +13,16 @@ import (
 	"github.com/go-base-lib/goextension"
 	"github.com/go-base-lib/logs"
 	"github.com/golang-jwt/jwt/v4"
+	"github.com/nsqio/go-nsq"
+	"github.com/panjf2000/ants/v2"
 	"github.com/teamManagement/common/conn"
+	"golang.org/x/net/context"
 	"net"
 	"strconv"
 	"strings"
 	"sync"
+	"team-client-server/db"
+	"team-client-server/queue"
 	"team-client-server/tools"
 	"team-client-server/vos"
 	"time"
@@ -37,6 +42,14 @@ const (
 	TcpTransferCmdCodeRestoreServerConnErr
 	// TcpTransferCmdCodeRestoreServerConnOK 远程服务恢复成功
 	TcpTransferCmdCodeRestoreServerConnOK
+	// TcpTransferCmdCodeOtherUserStatusChange 其他用户状态变更
+	TcpTransferCmdCodeOtherUserStatusChange
+	// TcpTransferCmCodeOtherLogin 用户在他处登录
+	TcpTransferCmCodeOtherLogin
+	// TcpTransferCmdCodeQueue 消息队列的消息推送
+	TcpTransferCmdCodeQueue
+	// TcpTransferCmdCodeChatMsgChange 聊天消息交换
+	TcpTransferCmdCodeChatMsgChange
 )
 
 // TcpTransferInfo tcp转移信息, 用于tcp消息转换为ws消息
@@ -67,8 +80,15 @@ func GetTcpTransfer() <-chan *TcpTransferInfo {
 	return tcpTransferChan
 }
 
+func sendTcpTransfer(info *TcpTransferInfo) {
+	defer func() { recover() }()
+	if tcpTransferChan != nil {
+		tcpTransferChan <- info
+	}
+}
+
 var (
-	nowUserInfo *UserInfo
+	nowUserInfo *vos.UserInfo
 	rawToken    [][]byte
 	loginOk     = false
 	connCloseCh chan struct{}
@@ -79,15 +99,11 @@ var (
 )
 
 const (
-	LocalWebServerAddress = "https://apps.byzk.cn:443"
-
-	ServerAddress = "apps.byzk.cn:80"
-
 	autoLoginSettingKey = "USER_CREDENTIALS"
 )
 
 func ClearAutoLoginInfo() {
-	autoLoginSetting := &vos.Setting{
+	autoLoginSetting := &db.Setting{
 		Name: autoLoginSettingKey,
 	}
 	sqlite.Db().Model(autoLoginSetting).Delete(autoLoginSetting)
@@ -95,7 +111,7 @@ func ClearAutoLoginInfo() {
 }
 
 func AutoLogin() (res bool) {
-	autoLoginSetting := &vos.Setting{
+	autoLoginSetting := &db.Setting{
 		Name: autoLoginSettingKey,
 	}
 	if err := sqlite.Db().Model(autoLoginSetting).First(&autoLoginSetting).Error; err != nil {
@@ -118,7 +134,7 @@ func AutoLogin() (res bool) {
 		return
 	}
 
-	if err = Login(string(username), string(password)); err != nil {
+	if err = Login(base64.StdEncoding.EncodeToString([]byte(username)), string(password)); err != nil {
 		return
 	}
 
@@ -131,7 +147,39 @@ func Login(username, password string) (err error) {
 	}
 	Logout()
 
-	dial, err := tls.Dial("tcp", ServerAddress, tools.GenerateTLSConfig())
+	decodePasswd, err := base64.StdEncoding.DecodeString(password)
+	if err != nil {
+		return fmt.Errorf("密码格式解析失败: %s", err.Error())
+	}
+
+	tcpAddress, err := GetServerTcpAddress()
+	if err != nil {
+		return err
+	}
+
+	localInter, ok := tools.TelnetHostRangeNetInterfaces(tcpAddress)
+	if !ok {
+		return fmt.Errorf("未识别到可用的网卡信息")
+	}
+
+	localInterIpStr := localInter.String()
+
+	localAddr, err := net.ResolveTCPAddr("tcp", localInterIpStr+":0")
+	if err != nil {
+		return errors.New("获取本机网卡IP失败")
+	}
+
+	usernameOriginBytes, err := base64.StdEncoding.DecodeString(username)
+	if err != nil {
+		return errors.New("解析用户名格式失败")
+	}
+	username = base64.StdEncoding.EncodeToString([]byte(localInterIpStr + "@" + string(usernameOriginBytes)))
+
+	dialer := &net.Dialer{
+		LocalAddr: localAddr,
+	}
+
+	dial, err := tls.DialWithDialer(dialer, "tcp", tcpAddress, tools.GenerateTLSConfig())
 	if err != nil {
 		return fmt.Errorf("连接远程服务失败: %s", err.Error())
 	}
@@ -191,7 +239,7 @@ func Login(username, password string) (err error) {
 
 	nowUserInfo.Token = jwtTokenStr
 
-	cachePasswd := nowUserInfo.Id + "_teamwork_cache_" + password
+	cachePasswd := nowUserInfo.Id + "_teamwork_cache_" + string(decodePasswd)
 	cachePasswdHash, err := coderutils.Hash(sha1.New(), []byte(cachePasswd))
 	if err != nil {
 		return fmt.Errorf("用户缓存帐号计算失败: %s", err.Error())
@@ -206,14 +254,48 @@ func Login(username, password string) (err error) {
 		return fmt.Errorf("登录消息签收失败")
 	}
 
-	sqlite.Db().Save(&vos.Setting{
+	sqlite.Db().Save(&db.Setting{
 		Name:  autoLoginSettingKey,
-		Value: vos.EncryptValue(base64.StdEncoding.EncodeToString([]byte(username)) + "." + base64.StdEncoding.EncodeToString([]byte(password))),
+		Value: db.EncryptValue(base64.StdEncoding.EncodeToString([]byte(nowUserInfo.Username)) + "." + base64.StdEncoding.EncodeToString([]byte(password))),
 	})
 
 	loginOk = true
 
-	_ = sqlite.Db().Table("app-" + nowUserInfo.Id + "-0").AutoMigrate(&vos.Setting{})
+	_ = sqlite.Db().Table("app-" + nowUserInfo.Id + "-0").AutoMigrate(&db.Setting{})
+
+	_ = FlushAllCache()
+
+	//if err = startChatWs(); err != nil {
+	//	return err
+	//}
+
+	if nowUserInfo.QueueConfig == nil {
+		return errors.New("获取队列配置失败")
+	}
+
+	if err = queue.StartListenerQueue(nowUserInfo.Id, nowUserInfo.Id, nowUserInfo.QueueConfig.Address, nowUserInfo.QueueConfig.VirtualHost); err != nil {
+		return err
+	}
+
+	ctx, cancelFunc := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancelFunc()
+
+	queueListenNotice := make(chan error)
+	_ = ants.Submit(func() {
+		queue.ListenQueue("chat_user_"+nowUserInfo.Id, nil, queueHandler, queueListenNotice)
+	})
+
+	select {
+	case err = <-queueListenNotice:
+		if err != nil {
+			return err
+		}
+		break
+	case <-ctx.Done():
+		return errors.New("连接用户消息队列通道超时, 请检查本地网络环境")
+	}
+
+	//queueHandler()
 
 	connCloseCh = make(chan struct{}, 1)
 	go userConnHandler(connWrapper, dial)
@@ -233,6 +315,12 @@ func userConnHandler(connWrapper *conn.Wrapper, dial net.Conn) {
 
 	isClose := false
 	defer func() {
+		queue.StopListenerQueue()
+		queueLock.Lock()
+		queueMsgMap = make(map[string]*nsq.Message)
+		queueLock.Unlock()
+
+		stopWsChat()
 		operationCh <- 1
 		close(cmdCh)
 		close(operationCh)
@@ -290,11 +378,16 @@ func userConnHandler(connWrapper *conn.Wrapper, dial net.Conn) {
 			isClose = true
 			return
 		case code := <-cmdCh:
+			data := <-dataCh
+			err := <-errCh
 			logs.Debugf("调用代码")
-			if err := serverCmdHandler(code, cmdCh, dataCh); err != nil {
+			if err = serverCmdHandler(err, code, data, readDataFn, writeDataFn); err != nil {
 				return
 			}
 		case err := <-errCh:
+			if err == nil {
+				continue
+			}
 			logs.Debugf("TCP通道监听返回错误: %s， 将要关闭TCP通道", err.Error())
 			return
 		}
@@ -358,7 +451,21 @@ func tokenDelay(readDataFn func() (goextension.Bytes, error), writeDataFn func(d
 	return nil
 }
 
-func serverCmdHandler(cmdCode byte, cmdCh chan byte, dataCh chan goextension.Bytes) error {
+func serverCmdHandler(err error, cmdCode byte, data goextension.Bytes, readDataFn func() (goextension.Bytes, error), writeDataFn func(data []byte) error) error {
+	switch cmdCode {
+	case remoteModelCodeUpdateCache:
+		_ = FlushAllCache()
+	case remoteModelCodeOtherUserStatusChange:
+		sendTcpTransfer(&TcpTransferInfo{
+			CmdCode: TcpTransferCmdCodeOtherUserStatusChange,
+			Data:    data,
+		})
+	case remoteModelCodeOtherLoginNotify:
+		sendTcpTransfer(&TcpTransferInfo{
+			CmdCode: TcpTransferCmCodeOtherLogin,
+			Data:    data,
+		})
+	}
 	return nil
 }
 
@@ -421,6 +528,7 @@ func Logout() {
 	if lock.TryLock() {
 		defer lock.Unlock()
 	}
+	stopWsChat()
 	chanLock.Lock()
 	defer chanLock.Unlock()
 	loginOk = false
@@ -435,6 +543,7 @@ func Logout() {
 	logs.Debugln("TCP服务通道成功返回关闭成功")
 
 	connCloseCh = nil
+	queue.StopListenerQueue()
 }
 
 func LoginOk() bool {
@@ -452,9 +561,18 @@ func Token() string {
 	return user.Token
 }
 
-func NowUser() (*UserInfo, error) {
-	lock.Lock()
-	defer lock.Unlock()
+func LoginIp() string {
+	user, err := NowUser()
+	if err != nil {
+		return ""
+	}
+	return user.LoginIp
+}
+
+func NowUser() (*vos.UserInfo, error) {
+	if lock.TryLock() {
+		defer lock.Unlock()
+	}
 
 	if nowUserInfo == nil {
 		return nil, errors.New("用户未登录")

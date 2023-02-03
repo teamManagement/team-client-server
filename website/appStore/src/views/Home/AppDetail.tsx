@@ -1,11 +1,11 @@
 import { Button, Divider, Image, message, Modal, Spin } from "antd";
 import { FC, useCallback, useEffect, useRef, useState } from "react";
-import { IconPro } from "../../components/Icons";
+// import { IconPro } from "../../components/Icons";
 import { CloudDownloadOutlined, CloudUploadOutlined } from '@ant-design/icons';
 import { getAppTypeList } from "../../serve";
 import Detail from "./Detail";
-import { store } from '@byzk/teamwork-sdk';
-import { applications } from '@byzk/teamwork-inside-sdk';
+import { store } from '@teamworktoolbox/sdk';
+import { applications } from '@teamworktoolbox/inside-sdk';
 
 
 interface IAppDetailProps {
@@ -22,7 +22,7 @@ const AppDetail: FC<IAppDetailProps> = (props) => {
   const [ifDetail, setIfDetail] = useState<boolean>(false)
   const fnsRef = useRef<any>()
   const [appName, setAppName] = useState<string>()
-  const [showOne, setShowOne] = useState<boolean>(true)
+  const [showOne, ] = useState<boolean>(true)
   const [ifInstall, setIfInstall] = useState<any[]>([])
   const [loading, setLoading] = useState<boolean>(false)
   const [mDetail, setMDetail] = useState<any>()

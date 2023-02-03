@@ -126,6 +126,7 @@ func Run() {
 		return
 	}
 
+	logs.Infof("准备启动服务...")
 	if err = s.Run(); err != nil {
 		logs.Panicf("服务运行失败: %s", err.Error())
 	}

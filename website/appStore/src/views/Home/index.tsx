@@ -2,7 +2,7 @@ import { Image, Modal, Spin } from 'antd';
 import { useCallback, useEffect, useState } from 'react'
 import AppDetail from './AppDetail';
 import { getTypeList } from '../../serve';
-import { store } from '@byzk/teamwork-sdk';
+import { store } from '@teamworktoolbox/sdk';
 import { ToolOutlined } from '@ant-design/icons';
 import './index.less'
 

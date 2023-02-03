@@ -127,7 +127,7 @@ export default class FileUpload extends Component<IFileUploadProps, IState> {
             return;
         }
         this.sizeReading = true;
-        const { fileObj } = this.state;
+        // const { fileObj } = this.state;
         const { valueMode } = this.props;
         var size = null;
         const valueFlag = valueMode ?? 'base64';

@@ -4,7 +4,7 @@ import Router from "./router";
 import { ConfigProvider } from "antd";
 import zhCN from "antd/lib/locale/zh_CN";
 import "./index.less";
-import TreeCreate from "./views/TreeCreate";
+// import TreeCreate from "./views/TreeCreate";
 
 const root = ReactDOM.createRoot(
   document.getElementById("root") as HTMLElement
